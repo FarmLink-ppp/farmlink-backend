@@ -14,19 +14,23 @@ datasource db {
 }
 
 model User {
-  id               Int      @id @default(autoincrement())
-  username         String   @unique @db.VarChar(25)
-  email            String   @unique @db.VarChar(255)
-  password_hash    String
-  full_name        String   @db.VarChar(100)
-  profile_image    String?
-  bio              String?
-  location         String?
-  verify_token     String?
-  is_verified      Boolean  @default(false)
-  reset_pass_token String?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id                    Int       @id @default(autoincrement())
+  username              String    @unique @db.VarChar(25)
+  email                 String    @unique @db.VarChar(255)
+  password_hash         String
+  full_name             String    @db.VarChar(100)
+  profile_image         String?
+  bio                   String?
+  location              String?
+  verify_token          String?
+  verify_token_expires  DateTime?
+  is_verified           Boolean   @default(false)
+  reset_pass_token      String?
+  reset_pass_expires    DateTime?
+  refresh_token         String?
+  refresh_token_expires DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 
   farm                  Farm?
   followers             Follow[]              @relation("follower")
