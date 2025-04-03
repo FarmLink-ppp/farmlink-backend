@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     const secret = configService.get<'string'>('JWT_SECRET');
     if (!secret) {
       throw new Error('JWT_SECRET environment variable is not set');
@@ -17,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  validate(payload: { sub: number; username: string }) {
     return { id: payload.sub, username: payload.username };
   }
 }

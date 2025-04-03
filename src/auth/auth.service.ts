@@ -67,6 +67,7 @@ export class AuthService {
 
       const tokens = await this.getTokens(user!.id, loginDto.username);
       await this.storeRefreshToken(user!.id, tokens.refreshToken);
+      user!.refresh_token = tokens.refreshToken;
       this.setCookies(res, tokens);
 
       return {
@@ -142,7 +143,9 @@ export class AuthService {
         user.verify_token_expires &&
         new Date() > new Date(user.verify_token_expires)
       )
-        await this.usersService.verifyUser(user.id);
+        throw new ForbiddenException('Verification token expired');
+
+      await this.usersService.verifyUser(user.id);
       return { message: 'Email verified successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -307,7 +310,10 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new InternalServerErrorException('Token refresh failed');
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Refresh token expired');
+      }
+      throw new InternalServerErrorException(error, 'Token refresh failed');
     }
   }
 

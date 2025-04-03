@@ -78,14 +78,13 @@ export class UsersService {
     return await this.prisma.user.update({
       where: { id },
       data: {
-        ...updateUserDto,
-        ...(updateUserDto.fullName && { full_name: updateUserDto.fullName }),
-        ...(updateUserDto.profileImage && {
-          profile_image: updateUserDto.profileImage,
-        }),
-        ...(updateUserDto.password && {
-          password_hash: updateUserDto.password,
-        }),
+        username: updateUserDto.username ?? user.username,
+        email: updateUserDto.email ?? user.email,
+        full_name: updateUserDto.fullName ?? user.full_name,
+        profile_image: updateUserDto.profileImage ?? user.profile_image,
+        bio: updateUserDto.bio ?? user.bio,
+        location: updateUserDto.location ?? user.location,
+        password_hash: updateUserDto.password ?? user.password_hash,
       },
       select: this.userSafeFields,
     });
@@ -106,6 +105,7 @@ export class UsersService {
     await this.prisma.user.update({
       where: { id },
       data: {
+        is_verified: true,
         verify_token: null,
         verify_token_expires: null,
       },

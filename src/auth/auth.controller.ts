@@ -107,11 +107,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(
-    @Req() req: Request & { user: { sub: number; username: string } },
+    @Req() req: Request & { user: { id: number; username: string } },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.authService.logout(req.user.sub, res);
+      return await this.authService.logout(req.user.id, res);
     } catch (error) {
       this.handleError(error, 'Logout failed');
     }
