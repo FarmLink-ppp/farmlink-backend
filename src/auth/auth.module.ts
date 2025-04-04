@@ -8,6 +8,8 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from 'src/mail/mail.service';
+import { HashService } from 'src/common/services/hash.service';
+import { TokenService } from './token/token.service';
 
 @Module({
   imports: [
@@ -32,7 +34,14 @@ import { EmailService } from 'src/mail/mail.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, EmailService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    EmailService,
+    HashService,
+    TokenService,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

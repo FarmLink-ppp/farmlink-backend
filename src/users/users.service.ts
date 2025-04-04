@@ -7,16 +7,21 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { HashService } from 'src/common/services/hash.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hashService: HashService,
+  ) {}
   async create(createUserDto: CreateUserDto) {
     await this.checkIfUserExists(createUserDto.email, createUserDto.username);
 
     // hash password
-    const password_hash = await this.hashPassword(createUserDto.password);
+    const password_hash = await this.hashService.hashPassword(
+      createUserDto.password,
+    );
 
     return await this.prisma.user.create({
       data: {
@@ -40,6 +45,17 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+    return user;
+  }
+
+  async findByOrNull(
+    where: Prisma.UserWhereUniqueInput,
+    select?: Prisma.UserSelect,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where,
+      select: { ...this.userSafeFields, ...select },
+    });
     return user;
   }
 
@@ -72,7 +88,9 @@ export class UsersService {
       );
     // hash password if it is being updated
     if (updateUserDto.password) {
-      updateUserDto.password = await this.hashPassword(updateUserDto.password);
+      updateUserDto.password = await this.hashService.hashPassword(
+        updateUserDto.password,
+      );
     }
 
     return await this.prisma.user.update({
@@ -211,10 +229,5 @@ export class UsersService {
     throw new ConflictException(
       'User with this email or username already exists',
     );
-  }
-
-  private async hashPassword(password: string) {
-    const salt = await bcrypt.genSalt(10);
-    return await bcrypt.hash(password, salt);
   }
 }

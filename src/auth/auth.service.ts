@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
   ConflictException,
@@ -8,26 +7,24 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'src/users/users.service';
-import { LoginDto } from './dto/login.dto';
 import { Response } from 'express';
+import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
-import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { EmailVerificationDto } from './dto/email-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UsersService } from 'src/users/users.service';
 import { EmailService } from 'src/mail/mail.service';
+import { HashService } from 'src/common/services/hash.service';
 import { User } from '@prisma/client';
-
+import { TokenService } from './token/token.service';
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
+    private readonly hashService: HashService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async validateUser(
@@ -39,10 +36,11 @@ export class AuthService {
       if (!user) {
         return null;
       }
-      const isPasswordValid = await bcrypt.compare(
+      const isPasswordValid = await this.hashService.comparePassword(
         password,
         user.password_hash,
       );
+
       if (!isPasswordValid) {
         throw new ForbiddenException('Invalid credentials');
       }
@@ -68,10 +66,11 @@ export class AuthService {
         loginDto.password,
       );
 
-      const tokens = await this.getTokens(user!.id, loginDto.username);
-      await this.storeRefreshToken(user!.id, tokens.refreshToken);
-      user!.refresh_token = tokens.refreshToken;
-      this.setCookies(res, tokens);
+      const tokens = await this.tokenService.generateTokenAndSetCookie(
+        user!.id,
+        loginDto.username,
+        res,
+      );
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { refresh_token, refresh_token_expires, ...userResponse } = user!;
@@ -94,11 +93,11 @@ export class AuthService {
     try {
       const newUser = await this.usersService.create(createUserDto);
 
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const verificationTokenExpiration = new Date();
-      verificationTokenExpiration.setHours(
-        verificationTokenExpiration.getHours() + 24,
-      ); // 24h
+      const {
+        token: verificationToken,
+        expiresAt: verificationTokenExpiration,
+      } = this.hashService.generateTokenWithExpiration(32, 24);
+
       await this.usersService.updateVerificationToken(
         newUser.id,
         verificationToken,
@@ -128,8 +127,7 @@ export class AuthService {
     try {
       await this.usersService.updateRefreshToken(userId, null, null);
 
-      res.clearCookie('access_token');
-      res.clearCookie('refresh_token');
+      this.tokenService.clearCookies(res);
 
       return { message: 'Logged out successfully' };
     } catch (error) {
@@ -165,7 +163,7 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const user = await this.usersService.findBy({ email });
+      const user = await this.usersService.findByOrNull({ email });
       if (!user) {
         return {
           message:
@@ -175,11 +173,11 @@ export class AuthService {
       if (user.is_verified) {
         throw new BadRequestException('Email already verified');
       }
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const verificationTokenExpiration = new Date();
-      verificationTokenExpiration.setHours(
-        verificationTokenExpiration.getHours() + 24,
-      ); // 24h
+      const {
+        token: verificationToken,
+        expiresAt: verificationTokenExpiration,
+      } = this.hashService.generateTokenWithExpiration(32, 24);
+
       await this.usersService.updateVerificationToken(
         user.id,
         verificationToken,
@@ -219,10 +217,8 @@ export class AuthService {
             'If this email is registered, a reset link has been sent. Please check your inbox or spam folder.',
         };
       }
-      const resetToken = crypto.randomBytes(32).toString('hex');
-
-      const resetTokenExpiration = new Date();
-      resetTokenExpiration.setHours(resetTokenExpiration.getHours() + 1); // 1h
+      const { token: resetToken, expiresAt: resetTokenExpiration } =
+        this.hashService.generateTokenWithExpiration();
 
       await this.usersService.updateResetToken(
         user.id,
@@ -277,10 +273,8 @@ export class AuthService {
   async refreshTokens(refreshToken: string, res: Response) {
     try {
       // Verify the refresh token
-      const payload: { sub: number; username: string } =
-        await this.jwtService.verifyAsync(refreshToken, {
-          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        });
+
+      const payload = await this.tokenService.verifyRefreshToken(refreshToken);
 
       const userId = payload.sub;
       const username = payload.username;
@@ -311,11 +305,11 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token expired');
       }
 
-      const tokens = await this.getTokens(user.id, user.username);
-
-      await this.storeRefreshToken(user.id, tokens.refreshToken);
-
-      this.setCookies(res, tokens);
+      const tokens = await this.tokenService.generateTokenAndSetCookie(
+        user.id,
+        user.username,
+        res,
+      );
 
       return {
         accessToken: tokens.accessToken,
@@ -329,71 +323,5 @@ export class AuthService {
       }
       throw new InternalServerErrorException(error, 'Token refresh failed');
     }
-  }
-
-  private async getTokens(userId: number, username: string) {
-    try {
-      const [accessToken, refreshToken] = await Promise.all([
-        this.jwtService.signAsync(
-          { sub: userId, username },
-          {
-            expiresIn: '1d',
-            secret: this.configService.get<string>('JWT_SECRET'),
-          },
-        ),
-        this.jwtService.signAsync(
-          { sub: userId, username },
-          {
-            expiresIn: '30d',
-            secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-          },
-        ),
-      ]);
-
-      return {
-        accessToken,
-        refreshToken,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException(error, 'Error generating tokens');
-    }
-  }
-
-  private async storeRefreshToken(userId: number, refreshToken: string) {
-    try {
-      const refreshTokenExpires = new Date();
-      refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 30);
-
-      await this.usersService.updateRefreshToken(
-        userId,
-        refreshToken,
-        refreshTokenExpires,
-      );
-    } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error storing refresh token',
-      );
-    }
-  }
-
-  private setCookies(
-    res: Response,
-    tokens: { accessToken: string; refreshToken: string },
-  ) {
-    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
-    res.cookie('access_token', tokens.accessToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-
-    res.cookie('refresh_token', tokens.refreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
-      maxAge: 30 * 60 * 60 * 24 * 1000, // 30 days
-    });
   }
 }
