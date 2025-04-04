@@ -196,12 +196,13 @@ export class UsersService {
     excludeId?: number,
   ) {
     if (!email && !username) return;
+    const conditions: Prisma.UserWhereInput[] = [];
+    if (email) conditions.push({ email });
+    if (username) conditions.push({ username });
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          ...(email ? [{ email }] : []),
-          ...(username ? [{ username }] : []),
-        ],
+        OR: conditions,
         NOT: excludeId ? { id: excludeId } : undefined,
       },
     });

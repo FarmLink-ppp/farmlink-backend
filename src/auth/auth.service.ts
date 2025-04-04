@@ -19,6 +19,7 @@ import { EmailVerificationDto } from './dto/email-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from 'src/mail/mail.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +30,10 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async validateUser(username: string, password: string) {
+  async validateUser(
+    username: string,
+    password: string,
+  ): Promise<Omit<User, 'password_hash'> | null> {
     try {
       const user = await this.usersService.findByCredentials(username);
       if (!user) {
@@ -69,9 +73,11 @@ export class AuthService {
       user!.refresh_token = tokens.refreshToken;
       this.setCookies(res, tokens);
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { refresh_token, refresh_token_expires, ...userResponse } = user!;
       return {
-        user,
-        tokens,
+        user: userResponse,
+        accessToken: tokens.accessToken,
       };
     } catch (error) {
       if (
@@ -142,7 +148,7 @@ export class AuthService {
         user.verify_token_expires &&
         new Date() > new Date(user.verify_token_expires)
       )
-        throw new ForbiddenException('Verification token expired');
+        throw new ForbiddenException('Invalid or expired verification token');
 
       await this.usersService.verifyUser(user.id);
       return { message: 'Email verified successfully' };
@@ -161,7 +167,10 @@ export class AuthService {
     try {
       const user = await this.usersService.findBy({ email });
       if (!user) {
-        throw new NotFoundException('User not found');
+        return {
+          message:
+            'If this email is registered and not verified, a verification email has been sent. Please check your inbox or spam folder.',
+        };
       }
       if (user.is_verified) {
         throw new BadRequestException('Email already verified');
@@ -184,7 +193,7 @@ export class AuthService {
       );
       return {
         message:
-          'Verification email resent. Please check your inbox or spam folder.',
+          'If this email is registered and not verified, a verification email has been sent. Please check your inbox or spam folder.',
       };
     } catch (error) {
       if (
@@ -206,7 +215,8 @@ export class AuthService {
       const user = await this.usersService.findBy({ email });
       if (!user) {
         return {
-          message: 'If this email is registered, a reset link has been sent.',
+          message:
+            'If this email is registered, a reset link has been sent. Please check your inbox or spam folder.',
         };
       }
       const resetToken = crypto.randomBytes(32).toString('hex');
@@ -243,13 +253,13 @@ export class AuthService {
 
       const user = await this.usersService.findByResetToken(token);
       if (!user) {
-        throw new ForbiddenException('Invalid reset token');
+        throw new ForbiddenException('Invalid or expired reset token');
       }
       if (
         user.reset_pass_expires &&
         new Date() > new Date(user.reset_pass_expires)
       )
-        throw new ForbiddenException('Reset token expired');
+        throw new ForbiddenException('Invalid or expired reset token');
       // update password
       await this.usersService.update(user.id, { password });
       // set reset token to null
@@ -272,8 +282,15 @@ export class AuthService {
           secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         });
 
+      const userId = payload.sub;
+      const username = payload.username;
+
+      if (!userId || !username) {
+        throw new UnauthorizedException('Invalid refresh token payload');
+      }
+
       const user = await this.usersService.findBy(
-        { id: payload.sub },
+        { id: userId },
         { refresh_token: true, refresh_token_expires: true },
       );
 
@@ -301,7 +318,7 @@ export class AuthService {
       this.setCookies(res, tokens);
 
       return {
-        tokens,
+        accessToken: tokens.accessToken,
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
