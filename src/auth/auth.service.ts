@@ -19,7 +19,6 @@ import { EmailVerificationDto } from './dto/email-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from 'src/mail/mail.service';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
@@ -265,10 +264,8 @@ export class AuthService {
     }
   }
 
-  async refreshTokens(refreshTokenDto: RefreshTokenDto, res: Response) {
+  async refreshTokens(refreshToken: string, res: Response) {
     try {
-      const { refreshToken } = refreshTokenDto;
-
       // Verify the refresh token
       const payload: { sub: number; username: string } =
         await this.jwtService.verifyAsync(refreshToken, {
@@ -348,7 +345,7 @@ export class AuthService {
   private async storeRefreshToken(userId: number, refreshToken: string) {
     try {
       const refreshTokenExpires = new Date();
-      refreshTokenExpires.setHours(refreshTokenExpires.getHours() + 30);
+      refreshTokenExpires.setDate(refreshTokenExpires.getDate() + 30);
 
       await this.usersService.updateRefreshToken(
         userId,
@@ -367,17 +364,18 @@ export class AuthService {
     res: Response,
     tokens: { accessToken: string; refreshToken: string },
   ) {
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('access_token', tokens.accessToken, {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
     res.cookie('refresh_token', tokens.refreshToken, {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: 'lax',
       maxAge: 30 * 60 * 60 * 24 * 1000, // 30 days
     });
   }

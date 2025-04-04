@@ -45,6 +45,26 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
+    .addCookieAuth(
+      'access_token',
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Access token cookie (httpOnly, secure)',
+      },
+      'access-token',
+    )
+    .addCookieAuth(
+      'refresh_token',
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Refresh token cookie (httpOnly, secure)',
+      },
+      'refresh-token',
+    )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);

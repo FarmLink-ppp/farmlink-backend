@@ -2,12 +2,10 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
-  HttpStatus,
-  Param,
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -19,8 +17,12 @@ import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { EmailVerificationDto } from './dto/email-verification.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ApiBearerAuth, ApiCookieAuth } from '@nestjs/swagger';
+import { ResendEmailVerificationDto } from './dto/resend-email.dto';
+import {
+  RequestWithCookies,
+  RequestWithUser,
+} from 'src/common/types/auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -32,70 +34,52 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    try {
-      return await this.authService.login(loginDto, res);
-    } catch (error) {
-      this.handleError(error, 'Login failed');
-    }
+    return await this.authService.login(loginDto, res);
   }
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
-    try {
-      return await this.authService.register(createUserDto);
-    } catch (error) {
-      this.handleError(error, 'Registration failed');
-    }
+    return await this.authService.register(createUserDto);
   }
 
+  @ApiCookieAuth('refresh-token')
   @Post('refresh')
   async refreshToken(
-    @Body() refreshTokenDto: RefreshTokenDto,
+    @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
   ) {
-    try {
-      return await this.authService.refreshTokens(refreshTokenDto, res);
-    } catch (error) {
-      this.handleError(error, 'Token refresh failed');
+    const refreshToken = req.cookies?.refresh_token;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found in cookies');
     }
+    return await this.authService.refreshTokens(refreshToken, res);
   }
 
   @Post('verify-email')
   async verifyEmail(@Body() emailVerificationDto: EmailVerificationDto) {
-    try {
-      return await this.authService.verifyEmail(emailVerificationDto);
-    } catch (error) {
-      this.handleError(error, 'Email verification failed');
-    }
+    return await this.authService.verifyEmail(emailVerificationDto);
   }
 
-  @Post('resend-verification/:email')
-  async resendVerificationEmail(@Param('email') email: string) {
-    try {
-      return await this.authService.resendVerificationEmail(email);
-    } catch (error) {
-      this.handleError(error, 'Resend verification email failed');
-    }
+  @Post('resend-verification')
+  async resendVerificationEmail(
+    @Body() resendEmailVerificationDto: ResendEmailVerificationDto,
+  ) {
+    return await this.authService.resendVerificationEmail(
+      resendEmailVerificationDto.email,
+    );
   }
 
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    try {
-      return await this.authService.resetPassword(resetPasswordDto);
-    } catch (error) {
-      this.handleError(error, 'Password reset failed');
-    }
+    return await this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    try {
-      return await this.authService.forgotPassword(forgotPasswordDto);
-    } catch (error) {
-      this.handleError(error, 'Forgot password request failed');
-    }
+    return await this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @ApiCookieAuth('access-token')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -103,29 +87,13 @@ export class AuthController {
     return req.user;
   }
 
-  @ApiBearerAuth('JWT-auth')
+  @ApiCookieAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(
-    @Req() req: Request & { user: { id: number; username: string } },
+    @Req() req: RequestWithUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    try {
-      return await this.authService.logout(req.user.id, res);
-    } catch (error) {
-      this.handleError(error, 'Logout failed');
-    }
-  }
-
-  private handleError(error: any, defaultMessage: string) {
-    if (error instanceof HttpException) {
-      throw error;
-    }
-
-    console.error(`${defaultMessage}:`, error);
-
-    throw new HttpException(defaultMessage, HttpStatus.INTERNAL_SERVER_ERROR, {
-      cause: error,
-    });
+    return await this.authService.logout(req.user.id, res);
   }
 }
