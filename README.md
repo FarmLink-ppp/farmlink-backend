@@ -51,7 +51,16 @@ Follow these steps to set up the project locally:
 
    This command will apply the migrations defined in the `prisma/migrations` directory to your database.
 
-6. Start the development server:
+6. Generate Prisma client:
+
+   ```bash
+   npx prisma generate
+   ```
+
+   This command will generate the Prisma client based on your schema.
+   This step is necessary to ensure that the Prisma client is up to date with your database schema.
+
+7. Start the development server:
 
    ```bash
    npm run start:dev
