@@ -44,7 +44,10 @@ export class AuthController {
     description: 'User successfully logged in and received tokens',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Invalid credentials' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @UseGuards(LocalAuthGuard)
+  @HttpCode(200)
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,

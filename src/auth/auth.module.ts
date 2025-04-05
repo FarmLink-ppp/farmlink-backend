@@ -27,7 +27,7 @@ import { TokenService } from './token/token.service';
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
+            expiresIn: '1d',
           },
         };
       },

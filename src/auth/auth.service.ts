@@ -210,7 +210,7 @@ export class AuthService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     try {
       const { email } = forgotPasswordDto;
-      const user = await this.usersService.findBy({ email });
+      const user = await this.usersService.findByOrNull({ email });
       if (!user) {
         return {
           message:
@@ -283,7 +283,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token payload');
       }
 
-      const user = await this.usersService.findBy(
+      const user = await this.usersService.findByOrNull(
         { id: userId },
         { refresh_token: true, refresh_token_expires: true },
       );
@@ -292,7 +292,10 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      const isRefreshTokenValid = refreshToken === user.refresh_token;
+      const isRefreshTokenValid = await this.hashService.comparePassword(
+        refreshToken,
+        user.refresh_token,
+      );
 
       if (!isRefreshTokenValid) {
         throw new UnauthorizedException('Invalid refresh token');
@@ -318,8 +321,12 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      if (error instanceof Error && error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Refresh token expired');
+      if (
+        error instanceof Error &&
+        (error.name === 'TokenExpiredError' ||
+          error.name === 'JsonWebTokenError')
+      ) {
+        throw new UnauthorizedException(error, 'Invalid refresh token');
       }
       throw new InternalServerErrorException(error, 'Token refresh failed');
     }
