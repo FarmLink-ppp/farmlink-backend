@@ -12,7 +12,6 @@ import {
 } from '@nestjs/throttler';
 import { WeatherModule } from './weather/weather.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -41,7 +40,7 @@ import { WeatherModule } from './weather/weather.module';
     {
       provide: 'APP_GUARD',
       useClass: ThrottlerGuard,
-    }
+    },
   ],
 })
 export class AppModule {}

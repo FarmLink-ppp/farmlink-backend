@@ -9,4 +9,3 @@ import { HttpModule } from '@nestjs/axios';
   providers: [WeatherService],
 })
 export class WeatherModule {}
- 
