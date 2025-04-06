@@ -1,23 +1,38 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import axios from 'axios';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { catchError, firstValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WeatherService {
-  private readonly API_KEY = '0450eac5da790aef62d2c5df12dbd9e2';
+  private readonly logger = new Logger(WeatherService.name);
   private readonly BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+  private readonly API_KEY: string;
 
-  async getWeather(city_name: string) {
-    try {
-      const url = `${this.BASE_URL}?q=${city_name}&appid=${this.API_KEY}`;
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.API_KEY = this.configService.get<string>('OPENWEATHER_API_KEY')!;
 
-      const response = await axios.get(url);
-      return response.data;
-    } catch (error) {
-      throw new HttpException(
-        error.response?.data?.message || 'Error fetching weather data',
-        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  }
+
+  async getWeather(city_name: string): Promise<any> {
+    const url = `${this.BASE_URL}?q=${city_name}&appid=${this.API_KEY}`;
+
+    const { data } = await firstValueFrom(
+      this.httpService.get(url).pipe(
+        catchError((error: AxiosError<any>) => {
+          this.logger.error(`Failed to fetch weather for "${city_name}": ${error.message}`);
+          throw error;
+        }),
+      ),
+    );
+
+    return data;
   }
 }
+
+
 
