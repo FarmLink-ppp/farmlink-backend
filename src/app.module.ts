@@ -22,7 +22,7 @@ import {
         throttlers: [
           {
             name: 'default',
-            ttl: configService.get<number>('THROTTLE_TTL', 60),
+            ttl: configService.get<number>('THROTTLE_TTL', 60000),
             limit: configService.get<number>('THROTTLE_LIMIT', 10),
           },
         ],
