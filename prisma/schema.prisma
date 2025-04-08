@@ -14,23 +14,24 @@ datasource db {
 }
 
 model User {
-  id                    Int       @id @default(autoincrement())
-  username              String    @unique @db.VarChar(25)
-  email                 String    @unique @db.VarChar(255)
+  id                    Int         @id @default(autoincrement())
+  username              String      @unique @db.VarChar(25)
+  email                 String      @unique @db.VarChar(255)
   password_hash         String
-  full_name             String    @db.VarChar(100)
+  account_type          AccountType @default(PUBLIC)
+  full_name             String      @db.VarChar(100)
   profile_image         String?
   bio                   String?
   location              String?
   verify_token          String?
   verify_token_expires  DateTime?
-  is_verified           Boolean   @default(false)
+  is_verified           Boolean     @default(false)
   reset_pass_token      String?
   reset_pass_expires    DateTime?
   refresh_token         String?
   refresh_token_expires DateTime?
-  created_at            DateTime  @default(now())
-  updated_at            DateTime  @updatedAt
+  created_at            DateTime    @default(now())
+  updated_at            DateTime    @updatedAt
 
   farm                  Farm?
   followers             Follow[]              @relation("follower")
@@ -44,11 +45,13 @@ model User {
   workers               Worker[]
   plant_health_scans    PlantHealthScan[]
   chatbot_conversations ChatbotConversation[]
-  settings              UserSettings?
 
-  @@index([email])
-  @@index([username])
   @@map("users")
+}
+
+enum AccountType {
+  PUBLIC
+  PRIVATE
 }
 
 model Follow {
@@ -178,7 +181,6 @@ model Farm {
   user      User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   divisions LandDivision[]
 
-  @@index([user_id])
   @@map("farms")
 }
 
@@ -378,26 +380,4 @@ model ChatbotMessage {
 enum SenderType {
   USER
   BOT
-}
-
-model UserSettings {
-  id               Int             @id @default(autoincrement())
-  account_type     AccountType     @default(PUBLIC)
-  theme_preference ThemePreference @default(LIGHT)
-  updated_at       DateTime        @updatedAt
-
-  user_id Int  @unique
-  User    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@map("user_settings")
-}
-
-enum AccountType {
-  PUBLIC
-  PRIVATE
-}
-
-enum ThemePreference {
-  LIGHT
-  DARK
 }
