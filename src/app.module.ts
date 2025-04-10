@@ -11,6 +11,7 @@ import {
   ThrottlerModuleOptions,
 } from '@nestjs/throttler';
 import { WeatherModule } from './weather/weather.module';
+import { PostsModule } from './posts/posts.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { WeatherModule } from './weather/weather.module';
     PrismaModule,
     AuthModule,
     WeatherModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [
