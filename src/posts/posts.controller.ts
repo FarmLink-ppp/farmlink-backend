@@ -31,8 +31,8 @@ export class PostsController {
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postsService.findOne(+id);
+  findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.postsService.findOne(req.user.id,+id);
   }
   @ApiCookieAuth('access-token')
   @ApiBearerAuth('JWT-auth')

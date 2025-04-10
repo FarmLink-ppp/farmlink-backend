@@ -1,6 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsArray, IsEnum} from 'class-validator';
-import { PostCategory } from '@prisma/client';
+export enum PostCategoryEnum {
+  DISCUSSIONS = 'DISCUSSIONS',
+  PROBLEMS = 'PROBLEMS',
+  SOLUTIONS = 'SOLUTIONS',
+  TIPS = 'TIPS',
+}
 
 export class CreatePostDto {
   @ApiProperty({
@@ -27,6 +32,12 @@ export class CreatePostDto {
     example: 'DISCUSSIONS',
     required: true,
   })
-  @IsEnum(PostCategory, { message: 'Invalid post category' })
-  category: PostCategory; // ✅ Required
+  @IsEnum(PostCategoryEnum, { message: 'Invalid post category' })
+  @ApiProperty({
+  enum: PostCategoryEnum,
+  example: 'DISCUSSIONS',
+  required: true,
+})
+category: PostCategoryEnum;
+
 }
