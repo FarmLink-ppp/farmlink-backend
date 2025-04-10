@@ -103,6 +103,7 @@ export class UsersService {
         bio: updateUserDto.bio ?? user.bio,
         location: updateUserDto.location ?? user.location,
         password_hash: updateUserDto.password ?? user.password_hash,
+        account_type: updateUserDto.accountType ?? user.account_type,
       },
       select: this.userSafeFields,
     });
