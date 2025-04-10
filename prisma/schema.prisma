@@ -78,8 +78,7 @@ enum FollowStatus {
 
 model ForumPost {
   id         Int          @id @default(autoincrement())
-  title      String
-  content    String
+  content    String?
   image_urls String[]     @default([])
   category   PostCategory @default(DISCUSSIONS)
   view_count Int          @default(0)
