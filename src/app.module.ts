@@ -14,6 +14,7 @@ import { WeatherModule } from './weather/weather.module';
 import { FarmModule } from './farm/farm.module';
 import { PlantModule } from './plant/plant.module';
 import { LandDivisionModule } from './land-division/land-division.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { LandDivisionModule } from './land-division/land-division.module';
     FarmModule,
     PlantModule,
     LandDivisionModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [
