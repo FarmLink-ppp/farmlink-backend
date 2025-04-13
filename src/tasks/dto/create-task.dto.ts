@@ -1,11 +1,18 @@
-import { TaskPriority } from "@prisma/client";
-import { IsString, IsEnum, IsDateString, IsOptional, MinLength, MaxLength } from "class-validator";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { TaskPriority } from '@prisma/client';
+import {
+  IsString,
+  IsEnum,
+  IsDateString,
+  IsOptional,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskDto {
   @ApiProperty({
-    description: "Title of the task",
-    example: "Irrigate tomato field",
+    description: 'Title of the task',
+    example: 'Irrigate tomato field',
     minLength: 3,
     maxLength: 100,
   })
@@ -15,8 +22,8 @@ export class CreateTaskDto {
   title: string;
 
   @ApiProperty({
-    description: "Detailed description of the task",
-    example: "Use the automated irrigation system for 30 minutes.",
+    description: 'Detailed description of the task',
+    example: 'Use the automated irrigation system for 30 minutes.',
     minLength: 5,
     maxLength: 500,
   })
@@ -26,31 +33,31 @@ export class CreateTaskDto {
   description: string;
 
   @ApiProperty({
-    description: "Priority level of the task",
-    example: "HIGH",
+    description: 'Priority level of the task',
+    example: 'HIGH',
     enum: TaskPriority,
   })
   @IsEnum(TaskPriority)
   priority: TaskPriority;
 
   @ApiProperty({
-    description: "Start date of the task in ISO format",
-    example: "2025-04-15T08:00:00Z",
+    description: 'Start date of the task in ISO format',
+    example: '2025-04-15T08:00:00Z',
   })
   @IsDateString()
-  start_date: string;
+  startDate: string;
 
   @ApiProperty({
-    description: "Due date of the task in ISO format",
-    example: "2025-04-17T17:00:00Z",
+    description: 'Due date of the task in ISO format',
+    example: '2025-04-17T17:00:00Z',
   })
   @IsDateString()
-  due_date: string;
+  dueDate: string;
 
   @ApiPropertyOptional({
-    description: "Optional land division ID associated with the task",
+    description: 'Optional land division ID associated with the task',
     example: 42,
   })
   @IsOptional()
-  land_division_id?: number;
+  landDivisionId?: number;
 }
