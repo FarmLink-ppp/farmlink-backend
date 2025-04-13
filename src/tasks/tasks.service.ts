@@ -127,14 +127,8 @@ export class TasksService {
           user_id: userId,
           status: status,
         },
-        orderBy: {
-          due_date: 'asc',
-        },
-        include: {
-          assignments: {
-            include: { worker: true },
-          },
-        },
+        include: { assignments: { include: { worker: true } } },
+        orderBy: { due_date: 'asc' },
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -149,11 +143,7 @@ export class TasksService {
     if (!task) {
       throw new BadRequestException('Task not found');
     }
-    if (task.user_id !== userId) {
-      throw new BadRequestException(
-        'You are not authorized to update this task',
-      );
-    }
+    this.checkTaskOwnership(task, userId);
     try {
       return this.prisma.task.update({
         where: { id: taskId },
@@ -178,11 +168,7 @@ export class TasksService {
     if (!task) {
       throw new BadRequestException('Task not found');
     }
-    if (task.user_id !== userId) {
-      throw new BadRequestException(
-        'You are not authorized to update this task',
-      );
-    }
+    this.checkTaskOwnership(task, userId);
 
     try {
       return this.prisma.task.update({
@@ -203,11 +189,7 @@ export class TasksService {
       if (!task) {
         throw new BadRequestException('Task not found');
       }
-      if (task.user_id !== userId) {
-        throw new BadRequestException(
-          'You are not authorized to assign a worker to this task',
-        );
-      }
+      this.checkTaskOwnership(task, userId);
       const worker = await this.prisma.worker.findUnique({
         where: { id: workerId },
       });
@@ -234,6 +216,31 @@ export class TasksService {
       throw new InternalServerErrorException(
         error,
         'Failed to assign worker to task',
+      );
+    }
+  }
+
+  async deleteTask(taskId: number, userId: number) {
+    const task = await this.getTaskById(taskId);
+    if (!task) {
+      throw new BadRequestException('Task not found');
+    }
+    this.checkTaskOwnership(task, userId);
+    try {
+      await this.prisma.task.delete({
+        where: { id: taskId },
+      });
+      return { message: 'Task deleted successfully' };
+    } catch (error) {
+      throw new InternalServerErrorException(error, 'Failed to delete task');
+    }
+  }
+
+  private checkTaskOwnership(task: any, userId: number) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (task.user_id !== userId) {
+      throw new BadRequestException(
+        'You are not authorized to access this task',
       );
     }
   }
