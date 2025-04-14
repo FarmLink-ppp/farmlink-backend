@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from './../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreatePlantDto } from './dto/plant.dto';
+import { CreatePlantDto } from './dto/create-plant.dto';
+import { UpdatePlantDto } from './dto/update-plant.dto';
 
 @Injectable()
 export class PlantService {
@@ -12,13 +13,37 @@ export class PlantService {
       data: createPlantDto,
     });
   }
-  async getPlants() {
-    return this.prisma.plant.findMany();
+  async findAll() {
+    return this.prisma.plant.findMany({
+      include: {
+        land_divisions: true, // Optional: includes related land divisions
+      },
+    });
   }
 
   async getPlantById(id: number) {
-    return this.prisma.plant.findUnique({
+    const plant = await this.prisma.plant.findUnique({ where: { id } });
+    if (!plant) {
+      throw new NotFoundException('Plant not found');}
+    
+    return plant;
+  }
+  async update(id: number, updatePlantDto: UpdatePlantDto) {
+    const plant = await this.getPlantById(id);
+    if (!plant) {
+      throw new NotFoundException('Plant not found');
+    }
+    return this.prisma.plant.update({
       where: { id },
+      data: {
+        name: updatePlantDto.name ?? plant.name,
+        description: updatePlantDto.description ?? plant.description,
+        image_url: updatePlantDto.imageUrl ?? plant.image_url,
+        planting_date: updatePlantDto.plantingDate ?? plant.planting_date,
+        harvest_date: updatePlantDto.harvestDate ?? plant.harvest_date,
+        quantity: updatePlantDto.quantity ?? plant.quantity,
+        unit: updatePlantDto.unit ?? plant.unit,
     });
   }
+
 }
