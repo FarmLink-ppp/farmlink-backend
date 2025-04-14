@@ -25,6 +25,14 @@ Follow these steps to set up the project locally:
    cp .env.example .env
    ```
 
+   The required environment variables are:
+
+   - `POSTGRES_USER`: The username for your PostgreSQL database.
+   - `POSTGRES_PASSWORD`: The password for your PostgreSQL database.
+   - `DATABASE_URL`: The connection string for your PostgreSQL database.
+   - `JWT_SECRET`: A secret key used for signing JWT tokens.
+   - `JWT_REFRESH_SECRET`: The expiration time for JWT tokens (e.g., `1h` for 1 hour).
+
 4. Start the database (if using Docker) or set up PostgreSQL locally:
    If you have Docker installed, you can start the PostgreSQL database using Docker Compose (recommended approach):
 
