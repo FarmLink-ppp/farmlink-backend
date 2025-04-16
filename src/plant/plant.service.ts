@@ -30,20 +30,18 @@ export class PlantService {
   }
   async update(id: number, updatePlantDto: UpdatePlantDto) {
     const plant = await this.getPlantById(id);
-    if (!plant) {
-      throw new NotFoundException('Plant not found');
-    }
     return this.prisma.plant.update({
       where: { id },
       data: {
         name: updatePlantDto.name ?? plant.name,
         description: updatePlantDto.description ?? plant.description,
         image_url: updatePlantDto.imageUrl ?? plant.image_url,
-        planting_date: updatePlantDto.plantingDate ?? plant.planting_date,
-        harvest_date: updatePlantDto.harvestDate ?? plant.harvest_date,
-        quantity: updatePlantDto.quantity ?? plant.quantity,
-        unit: updatePlantDto.unit ?? plant.unit,
-    });
+    
+    }  });
   }
-
+  async remove(id: number) {
+    return this.prisma.plant.delete({ where: { id } });
+  }
+  
 }
+

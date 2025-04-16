@@ -32,15 +32,6 @@ export class CreateFarmDto {
     example: AreaUnit.HECTARES,
   })
   @IsEnum(AreaUnit)
-  @IsOptional()
-  areaUnit?: AreaUnit = AreaUnit.HECTARES;
-
-  @ApiProperty({
-    description: 'ID of the user who owns the farm',
-    example: 1,
-  })
-  @IsNumber()
-  userId: number; // If you're using authentication, this might be set server-side
-  
+  areaUnit: AreaUnit;
 
 }

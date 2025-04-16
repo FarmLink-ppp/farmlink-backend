@@ -11,11 +11,6 @@ export class CreateLandDivisionDto {
   @IsNumber()
   area: number;
 
-  @ApiProperty({ example: 'Wheat', description: 'Type of crop cultivated' })
-  @IsString()
-  @IsNotEmpty()
-  cropType: string;
-
   @ApiProperty({ enum: CultivationStatus, example: CultivationStatus.PLANTED })
   @IsEnum(CultivationStatus)
   cultivationStatus: CultivationStatus;
@@ -32,5 +27,5 @@ export class CreateLandDivisionDto {
 
   @ApiProperty({ example: 1, description: 'ID of the farm this division belongs to' })
   @IsInt()
-  farmId: number; // This will reference the farm the land division belongs t
+  farmId: number; // This will reference the farm the land division belongs to
 }

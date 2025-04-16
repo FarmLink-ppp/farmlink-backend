@@ -1,4 +1,4 @@
-import { Injectable,NotFoundException,ConflictException } from '@nestjs/common';
+import { Injectable,NotFoundException,ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from './../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { Farm } from '@prisma/client';  
@@ -8,8 +8,14 @@ import { UpdateFarmDto } from './dto/update-farm.dto';
 export class FarmService {
   constructor(private prisma: PrismaService) {}
 
-  async createFarm(createFarmDto: CreateFarmDto) {
+  async createFarm(createFarmDto: CreateFarmDto,userId: number) {
+    const existingFarm = await this.prisma.farm.findUnique({
+      where: { user_id: userId },
+    });
   
+    if (existingFarm) {
+      throw new ForbiddenException('User already has a farm');
+    }
     // If you want to associate the farm with the authenticated user, set user_id here
     const farm = await this.prisma.farm.create({
       data: {
@@ -17,7 +23,7 @@ export class FarmService {
         location: createFarmDto.location,
         area_unit: createFarmDto.areaUnit, // Map areaUnit to area_unit
         total_area: createFarmDto.totalArea, // Map totalArea to total_area
-        user: { connect: { id: createFarmDto.userId } }, // Ensure user is connected by ID
+        user: { connect: { id: userId  } }, // Ensure user is connected by ID
       },
     });
     return farm;
@@ -25,9 +31,9 @@ export class FarmService {
   
 
 
-  async getFarmById(id: number) {
+  async getFarmById(id: number,userId: number) {
     const farm= this.prisma.farm.findUnique({
-      where: { id },
+      where: { id,user_id: userId, },
       include: {
         divisions: {
           include: {
@@ -37,16 +43,18 @@ export class FarmService {
       },
     });
     if (!farm) {
-      throw new NotFoundException('farm not found');
+      throw new NotFoundException('Farm not found or not belong to the user');
     }
     return farm;
   }
-  async update(id: number, updateFarmDto: UpdateFarmDto){
-    const farm=await this.getFarmById(id);
+  async update(id: number, updateFarmDto: UpdateFarmDto, userId: number){
+    const farm = await this.getFarmById(id, userId);
     if (!farm) {
-      throw new NotFoundException('Farm not found');
+      throw new NotFoundException('Farm not found or not belong to the user');
     }
-  
+    if (farm.user_id !== userId) {
+      throw new NotFoundException('Access denied');
+    }
     return this.prisma.farm.update({
       where: { id },
       data: {
@@ -57,11 +65,8 @@ export class FarmService {
       },
     });
   }
-  async remove(id: number) {
-    const farm = await this.getFarmById(id);
-    if (!farm) {
-      throw new NotFoundException('Farm not found');
-    }
+  async remove(id: number, userId: number) {
+    const farm = await this.getFarmById(id,userId);
     return this.prisma.farm.delete({
       where: { id },
     });
