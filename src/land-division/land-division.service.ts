@@ -1,67 +1,71 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from './../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { LandDivision } from '@prisma/client';
 import { CreateLandDivisionDto } from './dto/create-land-division.dto';
 import { UpdateLandDivisionDto } from './dto/update-land-division.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { FarmService } from 'src/farm/farm.service';
+import { PlantService } from 'src/plant/plant.service';
 
-@Injectable()   
+@Injectable()
 export class LandDivisionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly farmService: FarmService,
+    private readonly plantService: PlantService,
+  ) {}
 
-  async createLandDivision(createLandDivisionDto: CreateLandDivisionDto,userId: number) {
-    // Check if the user is associated with the farm
-  const farm = await this.prisma.farm.findUnique({
-    where: { id: createLandDivisionDto.farmId },
-    include: { user: true }, // Assuming the farm has a relation to the user (owner)
-  });
-  if (!farm) {
-    throw new Error('Farm not found');
-  }
-  if (farm.user.id !== userId) {
-    throw new UnauthorizedException('You are not authorized to create a land division for this farm');
-  }
+  async createLandDivision(
+    createLandDivisionDto: CreateLandDivisionDto,
+    userId: number,
+  ) {
+    const farm = await this.farmService.getFarmByUserId(userId);
+
+    if (createLandDivisionDto.plantId) {
+      // check if a plant really exists with that id
+      await this.plantService.getPlantById(createLandDivisionDto.plantId);
+      return this.prisma.landDivision.create({
+        data: {
+          name: createLandDivisionDto.name,
+          area: createLandDivisionDto.area,
+          cultivation_status: createLandDivisionDto.cultivationStatus,
+          geolocation: createLandDivisionDto.geolocation,
+          farm: { connect: { id: farm.id } },
+          plant: { connect: { id: createLandDivisionDto.plantId } },
+        },
+      });
+    }
     return this.prisma.landDivision.create({
       data: {
         name: createLandDivisionDto.name,
         area: createLandDivisionDto.area,
         cultivation_status: createLandDivisionDto.cultivationStatus,
         geolocation: createLandDivisionDto.geolocation,
-        farm: { connect: { id: createLandDivisionDto.farmId } }, // Link to a farm
-        plant: { connect: { id: createLandDivisionDto.plantId } },// Link to a plant if provided
+        farm: { connect: { id: farm.id } },
       },
     });
   }
 
-  async getLandDivisionsByFarmId(farmId: number,userId: number) {
-    const farm = await this.prisma.farm.findUnique({
-      where: { id: farmId },
-      select: { user_id: true }, // Adjust this field based on your schema (user or user_id)
-    });
-  
-    if (!farm) {
-      throw new Error('Farm not found');
-    }
-  
-    if (farm.user_id !== userId) {
-      throw new UnauthorizedException('You are not authorized to access this farm\'s land divisions');
-    }
+  async getLandDivisionsByFarmId(farmId: number, userId: number) {
+    const farm = await this.farmService.getFarmById(farmId, userId);
+
     return this.prisma.landDivision.findMany({
-      where: { farm_id: farmId },
+      where: { farm_id: farm.id },
       include: {
-        plant: true, // This includes the related plant for each land division
+        plant: true,
       },
     });
   }
-  async getLandDivisionById(id: number,userId: number) {
+  async getLandDivisionById(id: number, userId: number) {
     const division = await this.prisma.landDivision.findUnique({
       where: { id },
       include: {
         plant: true,
         farm: {
           select: {
-            user_id: true, // Explicitly select the user_id field
+            user_id: true,
           },
         },
       },
@@ -69,48 +73,67 @@ export class LandDivisionService {
     if (!division) {
       throw new NotFoundException('Land division not found');
     }
-    if (division.farm?.user_id !== userId) {
-      throw new UnauthorizedException('You are not authorized to access this land division');
+    if (division.farm.user_id !== userId) {
+      throw new ForbiddenException('Access to this land division is forbidden');
     }
     return division;
   }
-  async updateLandDivision(id: number, updateLandDivisionDto: UpdateLandDivisionDto,userId: number) {
+  async updateLandDivision(
+    id: number,
+    updateLandDivisionDto: UpdateLandDivisionDto,
+    userId: number,
+  ) {
     const division = await this.getLandDivisionById(id, userId);
+    if (updateLandDivisionDto.plantId) {
+      await this.plantService.getPlantById(updateLandDivisionDto.plantId);
+    }
     return this.prisma.landDivision.update({
       where: { id },
       data: {
         name: updateLandDivisionDto.name ?? division.name,
         area: updateLandDivisionDto.area ?? division.area,
-        cultivation_status: updateLandDivisionDto.cultivationStatus ?? division.cultivation_status,
+        cultivation_status:
+          updateLandDivisionDto.cultivationStatus ??
+          division.cultivation_status,
         geolocation: updateLandDivisionDto.geolocation ?? division.geolocation,
-        farm_id: updateLandDivisionDto.farmId ??division.farm_id, // Update farm if farmId is provided
-        plant_id: updateLandDivisionDto.plantId ?? division.plant_id, // Update plant_id directly if plantId is provided
+        plant_id: updateLandDivisionDto.plantId ?? division.plant_id,
       },
     });
   }
   async deleteLandDivision(id: number, userId: number) {
-    const division = await this.getLandDivisionById(id, userId);
+    await this.getLandDivisionById(id, userId);
     return this.prisma.landDivision.delete({
       where: { id },
     });
   }
   async getPlantByLandDivisionId(landDivisionId: number, userId: number) {
-    const landDivision = await this.prisma.landDivision.findUnique({
-      where: { id: landDivisionId },
+    const landDivision = await this.checkLandDivisionOwnership(
+      landDivisionId,
+      userId,
+    );
+    if (!landDivision.plant_id) {
+      throw new NotFoundException('This land division has no plant assigned');
+    }
+    return this.plantService.getPlantById(landDivision.plant_id);
+  }
+
+  private async checkLandDivisionOwnership(id: number, userId: number) {
+    const division = await this.prisma.landDivision.findUnique({
+      where: { id },
       include: {
-        plant: true,
-        farm: true,
+        farm: {
+          select: {
+            user_id: true,
+          },
+        },
       },
     });
-  
-    if (!landDivision) {
-      throw new Error('Land division not found');
+    if (!division) {
+      throw new NotFoundException('Land division not found');
     }
-    if (landDivision.farm.user_id !== userId) {
-      throw new UnauthorizedException('You are not authorized to access this land division');
+    if (division.farm.user_id !== userId) {
+      throw new ForbiddenException('Access to this land division is forbidden');
     }
-  
-  
-    return landDivision.plant;
+    return division;
   }
 }

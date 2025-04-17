@@ -1,4 +1,15 @@
-import { Controller, Get,Delete,Patch, Post, Body, Param, ParseIntPipe, UnauthorizedException, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Delete,
+  Patch,
+  Post,
+  Body,
+  Param,
+  ParseIntPipe,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { LandDivisionService } from './land-division.service';
 import { CreateLandDivisionDto } from './dto/create-land-division.dto';
 import { UpdateLandDivisionDto } from './dto/update-land-division.dto';
@@ -27,79 +38,108 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 export class LandDivisionController {
   constructor(private readonly landDivisionService: LandDivisionService) {}
 
-  @Post()
   @ApiOperation({ summary: 'Create a new land division' })
-  @ApiResponse({ status: 201, description: 'Land division created successfully' })
   @ApiBody({ type: CreateLandDivisionDto })
-  async create(@Body() createDto: CreateLandDivisionDto, @Req() req: RequestWithUser) {
-    const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-    return this.landDivisionService.createLandDivision(createDto, userId);
+  @ApiResponse({
+    status: 201,
+    description: 'Land division created successfully',
+  })
+  @Post()
+  async create(
+    @Body() createDto: CreateLandDivisionDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.landDivisionService.createLandDivision(createDto, req.user.id);
   }
 
-  @Get('farm/:farmId')
-@ApiOperation({ summary: 'Get all land divisions for a specific farm' })
-@ApiParam({ name: 'farmId', type: Number, description: 'ID of the farm' })
+  @ApiOperation({ summary: 'Get all land divisions for a specific farm' })
+  @ApiParam({ name: 'farmId', type: Number, description: 'ID of the farm' })
   @ApiResponse({
     status: 200,
     description: 'List of land divisions for the specified farm',
   })
-async getAllByFarmId(@Param('farmId',ParseIntPipe) farmId: number, @Req() req: RequestWithUser) {
-  const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-  return this.landDivisionService.getLandDivisionsByFarmId(farmId,userId);
-}
-  @Get(':id')
-  @ApiOperation({ summary: 'Get land division by ID' })
-  @ApiResponse({ status: 200, description: 'Land division found' })
-  @ApiResponse({ status: 404, description: 'Land division not found' })
-  async findOne(@Param('id',ParseIntPipe) id: number, @Req() req: RequestWithUser) {
-    const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-    return this.landDivisionService.getLandDivisionById(id,userId);
+  @Get('farm/:farmId')
+  async getAllByFarmId(
+    @Param('farmId', ParseIntPipe) farmId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.landDivisionService.getLandDivisionsByFarmId(
+      farmId,
+      req.user.id,
+    );
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a land division' })
-  @ApiResponse({ status: 200, description: 'Land division updated successfully' })
+  @ApiOperation({ summary: 'Get land division by ID' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division',
+  })
+  @ApiResponse({ status: 200, description: 'Return land division' })
   @ApiResponse({ status: 404, description: 'Land division not found' })
+  @Get(':id')
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.landDivisionService.getLandDivisionById(id, req.user.id);
+  }
+
+  @ApiOperation({ summary: 'Update a land division' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division to update',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Land division updated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Land division not found' })
+  @Patch(':id')
   async update(
-    @Param('id',ParseIntPipe) id:number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateLandDivisionDto,
     @Req() req: RequestWithUser,
   ) {
-    const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-    return this.landDivisionService.updateLandDivision(id, updateDto,userId);
+    return this.landDivisionService.updateLandDivision(
+      id,
+      updateDto,
+      req.user.id,
+    );
   }
 
-  @Delete(':id')
   @ApiOperation({ summary: 'Delete a land division' })
-  @ApiResponse({ status: 200, description: 'Land division deleted successfully' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division to delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Land division deleted successfully',
+  })
   @ApiResponse({ status: 404, description: 'Land division not found' })
-  async remove(@Param('id',ParseIntPipe) id: number, @Req() req: RequestWithUser) {
-    const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
+  @Delete(':id')
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.landDivisionService.deleteLandDivision(id, req.user.id);
   }
-    return this.landDivisionService.deleteLandDivision(id,userId);
-  }
-  @Get(':id/plant')
+
   @ApiOperation({ summary: 'Get the plant planted in this land division' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division',
+  })
   @ApiResponse({ status: 404, description: 'Land division not found' })
-  async getPlant(@Param('id',ParseIntPipe) id: number, @Req() req: RequestWithUser) {
-    const userId = req.user?.id;
-  if (!userId) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-    return this.landDivisionService.getPlantByLandDivisionId(id,userId);
+  @Get(':id/plant')
+  async getPlant(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.landDivisionService.getPlantByLandDivisionId(id, req.user.id);
   }
 }

@@ -35,6 +35,22 @@ export class FarmService {
     }
   }
 
+  async getFarmByUserId(userId: number) {
+    try {
+      const farm = await this.prisma.farm.findUnique({
+        where: { user_id: userId },
+      });
+      if (!farm) throw new NotFoundException('Farm not found');
+      return farm;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(
+        error,
+        'Error fetching farm by user ID',
+      );
+    }
+  }
+
   async getFarmById(id: number, userId: number) {
     try {
       const farm = await this.prisma.farm.findUnique({
