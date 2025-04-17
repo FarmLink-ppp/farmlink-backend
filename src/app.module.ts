@@ -11,6 +11,9 @@ import {
   ThrottlerModuleOptions,
 } from '@nestjs/throttler';
 import { WeatherModule } from './weather/weather.module';
+import { FarmModule } from './farm/farm.module';
+import { PlantModule } from './plant/plant.module';
+import { LandDivisionModule } from './land-division/land-division.module';
 import { TasksModule } from './tasks/tasks.module';
 
 @Module({
@@ -34,6 +37,9 @@ import { TasksModule } from './tasks/tasks.module';
     PrismaModule,
     AuthModule,
     WeatherModule,
+    FarmModule,
+    PlantModule,
+    LandDivisionModule,
     TasksModule,
   ],
   controllers: [AppController],

@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Query,
-  UseGuards,
   Req,
   ParseEnumPipe,
   Delete,
@@ -15,13 +14,10 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { TaskStatus } from '@prisma/client';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import {
-  ApiBearerAuth,
   ApiBody,
-  ApiCookieAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -29,18 +25,13 @@ import {
 } from '@nestjs/swagger';
 import { UpdateTaskStatusDto } from './dto/update-status.dto';
 import { AssignTaskDto } from './dto/assign-task.dto';
+import { Auth } from 'src/common/decorators/auth.decorator';
 
-@ApiResponse({
-  status: 401,
-  description: 'Unauthorized',
-})
 @ApiResponse({
   status: 500,
   description: 'Internal server error',
 })
-@ApiBearerAuth('JWT-auth')
-@ApiCookieAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@Auth()
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
