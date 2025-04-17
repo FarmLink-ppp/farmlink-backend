@@ -1,13 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsNotEmpty } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AreaUnit } from '@prisma/client'; // Enum imported from Prisma
+import { AreaUnit } from '@prisma/client';
 
 export class CreateFarmDto {
   @ApiProperty({
     description: 'Name of the farm',
     example: 'Green Valley Farm',
   })
-  
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -18,7 +17,7 @@ export class CreateFarmDto {
   @IsString()
   @IsNotEmpty()
   location: string;
-  
+
   @ApiProperty({
     description: 'Total area of the farm',
     example: 25.5,
@@ -33,5 +32,4 @@ export class CreateFarmDto {
   })
   @IsEnum(AreaUnit)
   areaUnit: AreaUnit;
-
 }

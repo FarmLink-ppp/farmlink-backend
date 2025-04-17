@@ -204,22 +204,21 @@ model LandDivision {
   resource_usage ResourceUsage[]
   tasks          Task[]
 
-  plant_id Int
-  plant    Plant @relation(fields: [plant_id], references: [id], onDelete: SetNull)
+  plant_id Int?
+  plant    Plant? @relation(fields: [plant_id], references: [id], onDelete: SetNull)
 
   @@index([farm_id])
   @@index([cultivation_status])
   @@map("land_divisions")
 }
 
-
 model Plant {
-  id          Int             @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String?
   image_url   String?
-  created_at  DateTime        @default(now())
-  updated_at  DateTime        @updatedAt
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   land_divisions LandDivision[]
 
