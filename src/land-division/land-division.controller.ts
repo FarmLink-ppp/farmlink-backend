@@ -8,32 +8,18 @@ import {
   Param,
   ParseIntPipe,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { LandDivisionService } from './land-division.service';
 import { CreateLandDivisionDto } from './dto/create-land-division.dto';
 import { UpdateLandDivisionDto } from './dto/update-land-division.dto';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiParam,
-  ApiBearerAuth,
-  ApiCookieAuth,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { RequestWithUser } from 'src/common/types/auth.types';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-@ApiResponse({
-  status: 401,
-  description: 'Unauthorized',
-})
+import { Auth } from 'src/common/decorators/auth.decorator';
 @ApiResponse({
   status: 500,
   description: 'Internal server error',
 })
-@ApiBearerAuth('JWT-auth')
-@ApiCookieAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@Auth()
 @Controller('land-divisions')
 export class LandDivisionController {
   constructor(private readonly landDivisionService: LandDivisionService) {}

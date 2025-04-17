@@ -6,32 +6,19 @@ import {
   Param,
   Patch,
   Delete,
-  UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
 import { PlantService } from './plant.service';
-import {
-  ApiBearerAuth,
-  ApiCookieAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { CreatePlantDto } from './dto/create-plant.dto';
 import { UpdatePlantDto } from './dto/update-plant.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { Auth } from 'src/common/decorators/auth.decorator';
 
-@ApiResponse({
-  status: 401,
-  description: 'Unauthorized',
-})
 @ApiResponse({
   status: 500,
   description: 'Internal server error',
 })
-@ApiBearerAuth('JWT-auth')
-@ApiCookieAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@Auth()
 @Controller('plants')
 export class PlantController {
   constructor(private readonly plantService: PlantService) {}

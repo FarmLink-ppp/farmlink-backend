@@ -6,34 +6,21 @@ import {
   Param,
   Patch,
   Delete,
-  UseGuards,
   Req,
   ParseIntPipe,
 } from '@nestjs/common';
 import { FarmService } from './farm.service';
 import { CreateFarmDto } from './dto/create-farm.dto';
 import { UpdateFarmDto } from './dto/update-farm.dto';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBearerAuth,
-  ApiCookieAuth,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { RequestWithUser } from 'src/common/types/auth.types';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Auth } from 'src/common/decorators/auth.decorator';
 
-@ApiResponse({
-  status: 401,
-  description: 'Unauthorized',
-})
 @ApiResponse({
   status: 500,
   description: 'Internal server error',
 })
-@ApiBearerAuth('JWT-auth')
-@ApiCookieAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@Auth()
 @Controller('farms')
 export class FarmController {
   constructor(private readonly farmService: FarmService) {}
