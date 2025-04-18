@@ -1,6 +1,5 @@
 import {
   Body,
-  Controller,
   Get,
   HttpCode,
   Post,
@@ -11,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { Request, Response } from 'express';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -19,7 +17,6 @@ import { EmailVerificationDto } from './dto/email-verification.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import {
-  ApiBearerAuth,
   ApiBody,
   ApiCookieAuth,
   ApiOperation,
@@ -30,11 +27,15 @@ import {
   RequestWithCookies,
   RequestWithUser,
 } from 'src/common/types/auth.types';
+import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@Controller('auth')
+@ApiController('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Post('login')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Login user' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -43,17 +44,12 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Invalid credentials' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @UseGuards(LocalAuthGuard)
-  @HttpCode(200)
-  @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.login(loginDto, res);
+  login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    return this.authService.login(loginDto, res);
   }
 
+  @Post('register')
   @ApiOperation({ summary: 'Register user' })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({
@@ -66,12 +62,12 @@ export class AuthController {
     status: 409,
     description: 'User with this email or username already exists',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @Post('register')
-  async register(@Body() createUserDto: CreateUserDto) {
-    return await this.authService.register(createUserDto);
+  register(@Body() createUserDto: CreateUserDto) {
+    return this.authService.register(createUserDto);
   }
 
+  @Post('refresh')
+  @ApiCookieAuth('refresh-token')
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   @ApiResponse({
     status: 201,
@@ -81,9 +77,6 @@ export class AuthController {
     status: 401,
     description: 'Invalid refresh token or refresh token expired',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @ApiCookieAuth('refresh-token')
-  @Post('refresh')
   async refreshToken(
     @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
@@ -95,6 +88,8 @@ export class AuthController {
     return await this.authService.refreshTokens(refreshToken, res);
   }
 
+  @Post('verify-email')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Verify email' })
   @ApiBody({ type: EmailVerificationDto })
   @ApiResponse({
@@ -105,13 +100,12 @@ export class AuthController {
     status: 403,
     description: 'Invalid or expired verification token',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @HttpCode(200)
-  @Post('verify-email')
   async verifyEmail(@Body() emailVerificationDto: EmailVerificationDto) {
     return await this.authService.verifyEmail(emailVerificationDto);
   }
 
+  @Post('resend-verification')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Resend verification email' })
   @ApiBody({ type: ResendEmailVerificationDto })
   @ApiResponse({
@@ -123,12 +117,6 @@ export class AuthController {
     status: 400,
     description: 'Email already verified',
   })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-  })
-  @HttpCode(200)
-  @Post('resend-verification')
   async resendVerificationEmail(
     @Body() resendEmailVerificationDto: ResendEmailVerificationDto,
   ) {
@@ -137,6 +125,8 @@ export class AuthController {
     );
   }
 
+  @Post('forgot-password')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Forgot password' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
@@ -144,16 +134,12 @@ export class AuthController {
     description:
       'If this email is registered, a password reset email has been sent. Please check your inbox or spam folder.',
   })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-  })
-  @HttpCode(200)
-  @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return await this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @Post('reset-password')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Reset password' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
@@ -164,56 +150,33 @@ export class AuthController {
     status: 403,
     description: 'Invalid or expired reset token',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @HttpCode(200)
-  @Post('reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return await this.authService.resetPassword(resetPasswordDto);
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 
+  @Get('profile')
+  @Auth()
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({
     status: 200,
     description: 'User profile',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-  })
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
   getProfile(@Req() req: Request) {
     return req.user;
   }
 
+  @Post('logout')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({
     status: 200,
     description: 'User successfully logged out',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-  })
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(200)
-  @Post('logout')
-  async logout(
+  @Auth()
+  logout(
     @Req() req: RequestWithUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.authService.logout(req.user.id, res);
+    return this.authService.logout(req.user.id, res);
   }
 }

@@ -1,5 +1,4 @@
 import {
-  Controller,
   Get,
   Post,
   Body,
@@ -15,21 +14,18 @@ import { UpdateFarmDto } from './dto/update-farm.dto';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@ApiResponse({
-  status: 500,
-  description: 'Internal server error',
-})
 @Auth()
-@Controller('farms')
+@ApiController('farms')
 export class FarmController {
   constructor(private readonly farmService: FarmService) {}
 
+  @Post()
   @ApiOperation({ summary: 'Create a new farm' })
   @ApiResponse({ status: 201, description: 'Farm successfully created' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 403, description: 'User already has a farm' })
-  @Post()
   async create(
     @Body() createFarmDto: CreateFarmDto,
     @Req() req: RequestWithUser,
@@ -37,22 +33,23 @@ export class FarmController {
     return this.farmService.createFarm(createFarmDto, req.user.id);
   }
 
+  @Get(':id')
   @ApiOperation({ summary: "Get the authenticated user's farm by ID" })
-  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   @ApiResponse({ status: 200, description: 'Farm found and returned' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
-  @Get(':id')
+  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   async findOne(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: RequestWithUser,
   ) {
     return this.farmService.getFarmById(id, req.user.id);
   }
+
+  @Patch(':id')
   @ApiOperation({ summary: 'Update a farm ' })
-  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   @ApiResponse({ status: 200, description: 'Farm updated successfully' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
-  @Patch(':id')
+  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateFarmDto: UpdateFarmDto,
@@ -61,11 +58,11 @@ export class FarmController {
     return this.farmService.update(id, updateFarmDto, req.user.id);
   }
 
+  @Delete(':id')
   @ApiOperation({ summary: 'Delete a farm by ID' })
-  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   @ApiResponse({ status: 200, description: 'Farm deleted successfully' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
-  @Delete(':id')
+  @ApiParam({ name: 'id', type: Number, description: 'Farm ID' })
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: RequestWithUser,

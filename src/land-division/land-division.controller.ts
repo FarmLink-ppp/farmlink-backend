@@ -1,5 +1,4 @@
 import {
-  Controller,
   Get,
   Delete,
   Patch,
@@ -15,22 +14,20 @@ import { UpdateLandDivisionDto } from './dto/update-land-division.dto';
 import { ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { Auth } from 'src/common/decorators/auth.decorator';
-@ApiResponse({
-  status: 500,
-  description: 'Internal server error',
-})
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
+
 @Auth()
-@Controller('land-divisions')
+@ApiController('land-divisions')
 export class LandDivisionController {
   constructor(private readonly landDivisionService: LandDivisionService) {}
 
+  @Post()
   @ApiOperation({ summary: 'Create a new land division' })
   @ApiBody({ type: CreateLandDivisionDto })
   @ApiResponse({
     status: 201,
     description: 'Land division created successfully',
   })
-  @Post()
   async create(
     @Body() createDto: CreateLandDivisionDto,
     @Req() req: RequestWithUser,
@@ -38,13 +35,13 @@ export class LandDivisionController {
     return this.landDivisionService.createLandDivision(createDto, req.user.id);
   }
 
+  @Get('farm/:farmId')
   @ApiOperation({ summary: 'Get all land divisions for a specific farm' })
-  @ApiParam({ name: 'farmId', type: Number, description: 'ID of the farm' })
   @ApiResponse({
     status: 200,
     description: 'List of land divisions for the specified farm',
   })
-  @Get('farm/:farmId')
+  @ApiParam({ name: 'farmId', type: Number, description: 'ID of the farm' })
   async getAllByFarmId(
     @Param('farmId', ParseIntPipe) farmId: number,
     @Req() req: RequestWithUser,
@@ -55,15 +52,15 @@ export class LandDivisionController {
     );
   }
 
+  @Get(':id')
   @ApiOperation({ summary: 'Get land division by ID' })
+  @ApiResponse({ status: 200, description: 'Return land division' })
+  @ApiResponse({ status: 404, description: 'Land division not found' })
   @ApiParam({
     name: 'id',
     type: Number,
     description: 'ID of the land division',
   })
-  @ApiResponse({ status: 200, description: 'Return land division' })
-  @ApiResponse({ status: 404, description: 'Land division not found' })
-  @Get(':id')
   async findOne(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: RequestWithUser,
@@ -71,18 +68,18 @@ export class LandDivisionController {
     return this.landDivisionService.getLandDivisionById(id, req.user.id);
   }
 
+  @Patch(':id')
   @ApiOperation({ summary: 'Update a land division' })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'ID of the land division to update',
-  })
   @ApiResponse({
     status: 200,
     description: 'Land division updated successfully',
   })
   @ApiResponse({ status: 404, description: 'Land division not found' })
-  @Patch(':id')
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division to update',
+  })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateLandDivisionDto,
@@ -95,18 +92,18 @@ export class LandDivisionController {
     );
   }
 
+  @Delete(':id')
   @ApiOperation({ summary: 'Delete a land division' })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'ID of the land division to delete',
-  })
   @ApiResponse({
     status: 200,
     description: 'Land division deleted successfully',
   })
   @ApiResponse({ status: 404, description: 'Land division not found' })
-  @Delete(':id')
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'ID of the land division to delete',
+  })
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: RequestWithUser,
@@ -114,14 +111,14 @@ export class LandDivisionController {
     return this.landDivisionService.deleteLandDivision(id, req.user.id);
   }
 
+  @Get(':id/plant')
   @ApiOperation({ summary: 'Get the plant planted in this land division' })
+  @ApiResponse({ status: 404, description: 'Land division not found' })
   @ApiParam({
     name: 'id',
     type: Number,
     description: 'ID of the land division',
   })
-  @ApiResponse({ status: 404, description: 'Land division not found' })
-  @Get(':id/plant')
   async getPlant(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: RequestWithUser,

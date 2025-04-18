@@ -1,16 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
+import { Body, Get, Param, Patch, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { Auth } from 'src/common/decorators/auth.decorator';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@ApiResponse({
-  status: 500,
-  description: 'Internal server error',
-})
 @Auth()
-@Controller('users')
+@ApiController('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

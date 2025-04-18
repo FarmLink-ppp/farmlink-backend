@@ -1,21 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Get, Query } from '@nestjs/common';
 import { WeatherService } from './weather.service';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@ApiResponse({
-  status: 429,
-  description: 'Too many requests',
-})
-@ApiResponse({
-  status: 500,
-  description: 'Internal Server Error',
-})
 @Auth()
-@Controller('weather')
+@ApiController('weather')
 export class WeatherController {
   constructor(private readonly weatherService: WeatherService) {}
 
+  @Get()
   @ApiOperation({ summary: 'Get weather by city name' })
   @ApiResponse({
     status: 200,
@@ -29,7 +23,11 @@ export class WeatherController {
     status: 404,
     description: 'City not found',
   })
-  @Get()
+  @ApiQuery({
+    name: 'q',
+    description: 'City name to get the weather for',
+    type: String,
+  })
   async getWeather(@Query('q') cityName: string) {
     return this.weatherService.getWeather(cityName);
   }

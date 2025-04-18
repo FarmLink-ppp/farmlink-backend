@@ -5,7 +5,6 @@ export class EmailVerificationDto {
   @ApiProperty({
     description: 'Verification token',
     example: '1234567890abcdef',
-    required: true,
     type: String,
   })
   @IsNotEmpty()
