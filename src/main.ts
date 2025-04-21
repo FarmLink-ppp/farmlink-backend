@@ -5,12 +5,9 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
-
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create(AppModule);
   app.enableCors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
@@ -32,9 +29,6 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.use(cookieParser());
   app.use(helmet());
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
-  });
 
   const config = new DocumentBuilder()
     .setTitle('FarmLink')
