@@ -13,7 +13,6 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'The username of the user',
     example: 'john_doe',
-    required: true,
     minLength: 3,
     maxLength: 25,
   })
@@ -22,36 +21,37 @@ export class CreateUserDto {
   @MinLength(3)
   @MaxLength(25)
   username: string;
+
   @ApiProperty({
     description: 'The email of the user',
     example: 'johndoe@example.com',
-    required: true,
     format: 'email',
   })
   @IsEmail()
   @IsNotEmpty()
   @MaxLength(255)
   email: string;
+
   @ApiProperty({
     description: 'The password of the user',
     example: 'password123',
-    required: true,
     minLength: 6,
   })
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
   password: string;
+
   @ApiProperty({
     description: 'The full name of the user',
     example: 'John Doe',
-    required: true,
   })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
   @MaxLength(100)
   fullName: string;
+
   @ApiPropertyOptional({
     description: 'The profile image URL of the user',
     example: 'https://example.com/profile.jpg',
@@ -60,6 +60,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsUrl()
   profileImage?: string;
+
   @ApiPropertyOptional({
     description: 'The bio of the user',
     example: 'Farmer and entrepreneur',
@@ -68,6 +69,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   bio?: string;
+
   @ApiPropertyOptional({
     description: 'The location of the user',
     example: 'Beja, Tunisia',

@@ -24,9 +24,10 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
 @Auth()
-@Controller('users')
+@ApiController('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

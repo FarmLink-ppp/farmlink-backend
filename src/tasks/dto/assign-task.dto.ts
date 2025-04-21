@@ -6,7 +6,6 @@ export class AssignTaskDto {
     description: 'The ID of worker to assign the task to',
     type: Number,
     example: 1,
-    required: true,
   })
   @IsNotEmpty()
   @IsNumber()

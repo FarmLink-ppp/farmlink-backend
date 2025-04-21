@@ -7,7 +7,6 @@ export class UpdateTaskStatusDto {
     description: 'The status of the task',
     enum: TaskStatus,
     example: TaskStatus.PENDING,
-    required: true,
   })
   @IsEnum(TaskStatus)
   status: TaskStatus;
