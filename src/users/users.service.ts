@@ -37,7 +37,6 @@ export class UsersService {
     });
   }
 
-  //can group
   async findBy(
     where: Prisma.UserWhereUniqueInput,
     select?: Prisma.UserSelect,
