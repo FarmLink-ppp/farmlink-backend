@@ -8,24 +8,21 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 export class WorkerService {
    private readonly DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/150?text=Worker';
   constructor(private prisma: PrismaService) {}
-
-  async createWorker(data: CreateWorkerDto) {
-    
-    try{
+  async createWorker(data: CreateWorkerDto, userId: number) {
+    try {
       return this.prisma.worker.create({
-      data: {
-        name: data.name,
-        image_url: data.image_url || this.DEFAULT_PROFILE_IMAGE,
-        contact: data.contact,
-        employment_status: data.employment_status || 'ACTIVE',
-        User: {
-          connect: { id: data.employerId }
-        }
-      }
-    });
-  }
-    catch(error){
-            throw new InternalServerErrorException(error, 'Failed to create worker');
+        data: {
+          name: data.name,
+          image_url: data.image_url || this.DEFAULT_PROFILE_IMAGE,
+          contact: data.contact,
+          employment_status: data.employment_status || 'ACTIVE',
+          User: {
+            connect: { id: userId },
+          },
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(error, 'Failed to create worker');
     }
   }
 
@@ -48,12 +45,7 @@ export class WorkerService {
 
   async updateWorker(id: number, data: UpdateWorkerDto, userId: number) {
     const worker = await this.findOneWorker(id, userId);
-    if (!worker) {
-      throw new BadRequestException('Worker not found');
-    }
-    
-    // Vérification que l'utilisateur a le droit de modifier ce worker
-    this.checkWorkerOwnership(worker, userId);
+
     
     try {
       return this.prisma.worker.update({
@@ -63,12 +55,6 @@ export class WorkerService {
           image_url: data.image_url !== undefined ? data.image_url : worker.image_url,
           contact: data.contact ?? worker.contact,
           employment_status: data.employment_status ?? worker.employment_status,
-          // Si employerId est fourni, mettre à jour la relation
-          ...(data.employerId && {
-            User: {
-              connect: { id: data.employerId }
-            }
-          }),
         },
       });
     } catch (error) {
@@ -99,14 +85,10 @@ export class WorkerService {
   }
   
 
-  async findByEmployer(employerId: number , userId: number) {
+  async findByEmployer( userId: number) {
     try{
-      if (employerId !== userId) {
-
-        throw new ForbiddenException('You do not have permission to view these workers');
-      }
       return this.prisma.worker.findMany({
-        where: { employerId },
+        where: { User: { id: userId } },
         include: {
           assignments: true
         }

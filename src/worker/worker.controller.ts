@@ -38,8 +38,8 @@ export class WorkerController {
      status: 400,
      description: 'Validation error',
    })
-  createWorker(@Body() createWorkerDto: CreateWorkerDto) {
-    return this.workerService.createWorker(createWorkerDto);
+   create(@Body() data: CreateWorkerDto, @Request() req) {
+    return this.workerService.createWorker(data, req.user.id);
   }
 
  
@@ -52,11 +52,10 @@ export class WorkerController {
     description: 'workers retrieved successfully',
   })
 
-  findByEmployer(@Param('employerId',ParseIntPipe) employerId: number,
-  @Request() req)
+  findByEmployer( @Request() req)
  {
     const userId = req.user.id;
-    return this.workerService.findByEmployer(employerId, userId);
+    return this.workerService.findByEmployer( userId);
   }
 
 

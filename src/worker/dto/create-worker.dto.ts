@@ -37,14 +37,4 @@ export class CreateWorkerDto {
   @IsOptional()
   @IsEnum(EmploymentStatus)
   employment_status?: EmploymentStatus;
-
-
-@ApiProperty({
-    description: 'ID of the employer associated with the worker',
-    example: 1,
-  type: Number,
-  
-})
-  @IsInt()
-  employerId: number;
 }
