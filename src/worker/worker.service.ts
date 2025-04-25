@@ -29,25 +29,12 @@ export class WorkerService {
     }
   }
 
-  async findAllWorkers() {
-    try{
-      return this.prisma.worker.findMany({
-        include: {
-          User: true,
-          assignments: true
-        }
-      });
-    }catch(error){
-      throw new InternalServerErrorException(error, 'Failed to retrieve workers');
-    }
-  
-  }
+ 
 
-  async findOneWorker(id: number) {
+  async findOneWorker(id: number, userId: number) {
     const worker = await this.prisma.worker.findUnique({
-      where: { id },
+      where: { id, employerId: userId },
       include: {
-        User: true,
         assignments: true
       }
     });
@@ -60,7 +47,7 @@ export class WorkerService {
   }
 
   async updateWorker(id: number, data: UpdateWorkerDto, userId: number) {
-    const worker = await this.findOneWorker(id);
+    const worker = await this.findOneWorker(id, userId);
     if (!worker) {
       throw new BadRequestException('Worker not found');
     }
@@ -96,7 +83,7 @@ export class WorkerService {
   }
 
   async removeWorker(id: number, userId: number) {
-    const worker = await this.findOneWorker(id);
+    const worker = await this.findOneWorker(id, userId);
     if (!worker) {
       throw new BadRequestException('worker not found');
     }
@@ -112,8 +99,12 @@ export class WorkerService {
   }
   
 
-  async findByEmployer(employerId: number) {
+  async findByEmployer(employerId: number , userId: number) {
     try{
+      if (employerId !== userId) {
+
+        throw new ForbiddenException('You do not have permission to view these workers');
+      }
       return this.prisma.worker.findMany({
         where: { employerId },
         include: {
@@ -128,12 +119,14 @@ export class WorkerService {
    
   }
 
-  async findByStatus(status: EmploymentStatus) {
+  async findByStatus(status: EmploymentStatus, userId: number) {
     try{
+      
       return this.prisma.worker.findMany({
-        where: { employment_status: status },
+        where: { employment_status: status,
+          employerId: userId
+         },
         include: {
-          User: true,
           assignments: true
         }
       });
@@ -144,7 +137,7 @@ export class WorkerService {
     
   }
   async updateProfileImage(id: number, imageUrl: string, userId: number) {
-    const worker = await this.findOneWorker(id);
+    const worker = await this.findOneWorker(id, userId);
     if (!worker) {
       throw new BadRequestException('Worker not found');
     }

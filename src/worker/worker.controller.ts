@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete,  Request,UseInterceptors, UploadedFile,BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete,  Request,UseInterceptors, UploadedFile,BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { WorkerService } from './worker.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
@@ -25,7 +25,7 @@ export class WorkerController {
   constructor(private readonly workerService: WorkerService) {}
 
    @Post()
-   @ApiOperation({ summary: 'Create task' })
+   @ApiOperation({ summary: 'Create worker' })
    @ApiBody({
      description: 'Create worker',
      type: CreateWorkerDto,
@@ -38,19 +38,11 @@ export class WorkerController {
      status: 400,
      description: 'Validation error',
    })
-  create(@Body() createWorkerDto: CreateWorkerDto) {
+  createWorker(@Body() createWorkerDto: CreateWorkerDto) {
     return this.workerService.createWorker(createWorkerDto);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get workers' })
-  @ApiResponse({
-    status: 200,
-    description: 'workers retrieved successfully',
-  })
-  findAll() {
-    return this.workerService.findAllWorkers();
-  }
+ 
 
 
   @Get('employer/:employerId')
@@ -60,8 +52,11 @@ export class WorkerController {
     description: 'workers retrieved successfully',
   })
 
-  findByEmployer(@Param('employerId') employerId: string) {
-    return this.workerService.findByEmployer(+employerId);
+  findByEmployer(@Param('employerId',ParseIntPipe) employerId: number,
+  @Request() req)
+ {
+    const userId = req.user.id;
+    return this.workerService.findByEmployer(employerId, userId);
   }
 
 
@@ -72,9 +67,11 @@ export class WorkerController {
     description: 'workers retrieved successfully',
   })
 
-  findByStatus(@Param('status') status: EmploymentStatus) {
-    return this.workerService.findByStatus(status);
-  }
+  findByStatus(@Param('status') status: EmploymentStatus,
+  @Request() req) {
+    const userId = req.user.id;
+    return this.workerService.findByStatus(status, userId);
+   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get worker by ID' })
@@ -83,8 +80,10 @@ export class WorkerController {
     description: 'worker retrieved successfully',
   })
 
-  findOne(@Param('id') id: string) {
-    return this.workerService.findOneWorker(+id);
+  findOneWorker(@Param('id',ParseIntPipe) id: number,
+  @Request() req) {
+    const userId = req.user.id;
+    return this.workerService.findOneWorker(id, userId);
   }
 
   @Patch(':id')
@@ -106,15 +105,19 @@ export class WorkerController {
       description: 'worker ID',
       type: Number,
     })
-  update(
-    @Param('id') id: string, 
+  
+  
+    updateWorker(
+    @Param('id',ParseIntPipe) id: number, 
     @Body() updateWorkerDto: UpdateWorkerDto,
     @Request() req
   ) {
-    // Récupération de l'ID utilisateur depuis le token JWT
+
     const userId = req.user.id;
-    return this.workerService.updateWorker(+id, updateWorkerDto, userId);
+    return this.workerService.updateWorker(id, updateWorkerDto, userId);
   }
+  
+  
   @Delete(':id')
   @ApiOperation({ summary: 'Delete worker' })
   @ApiResponse({
@@ -130,10 +133,10 @@ export class WorkerController {
     description: 'worker ID',
     type: Number,
   })
-  remove(@Param('id') id: string,
+  removeWorker(@Param('id',ParseIntPipe) id: number,
   @Request() req) {
     const userId = req.user.id;
-    return this.workerService.removeWorker(+id,userId);
+    return this.workerService.removeWorker(id,userId);
   }
 
 
@@ -170,12 +173,12 @@ export class WorkerController {
         callback(null, true);
       },
       limits: {
-        fileSize: 1024 * 1024 * 5, // 5MB
+        fileSize: 1024 * 1024 * 1, // 1MB
       },
     }),
   )
   async uploadProfileImage(
-    @Param('id') id: string,
+    @Param('id',ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
     @Request() req
   ) {
@@ -186,7 +189,7 @@ export class WorkerController {
     // Créer l'URL de l'image
     const imageUrl = `${req.protocol}://${req.get('host')}/uploads/profile-images/${file.filename}`;
     
-    return this.workerService.updateProfileImage(+id, imageUrl, req.user.id);
+    return this.workerService.updateProfileImage(id, imageUrl, req.user.id);
   }
 
 
