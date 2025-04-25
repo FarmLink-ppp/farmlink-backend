@@ -37,25 +37,19 @@ export class UsersService {
     });
   }
 
-  async findBy(where: Prisma.UserWhereUniqueInput, select?: Prisma.UserSelect) {
-    const user = await this.prisma.user.findUnique({
-      where,
-      select: { ...this.userSafeFields, ...select },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
-  }
-
-  async findByOrNull(
+  //can group
+  async findBy(
     where: Prisma.UserWhereUniqueInput,
     select?: Prisma.UserSelect,
+    throwIfNotFound: boolean = true,
   ) {
     const user = await this.prisma.user.findUnique({
       where,
       select: { ...this.userSafeFields, ...select },
     });
+    if (!user && throwIfNotFound) {
+      throw new NotFoundException('User not found');
+    }
     return user;
   }
 
@@ -64,12 +58,6 @@ export class UsersService {
       where: {
         OR: [{ username }, { email: username }],
       },
-    });
-  }
-
-  async findAll() {
-    return await this.prisma.user.findMany({
-      select: this.userSafeFields,
     });
   }
 
