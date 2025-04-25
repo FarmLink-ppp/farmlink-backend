@@ -163,7 +163,7 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const user = await this.usersService.findBy({ email }, {}, false);
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
@@ -210,7 +210,7 @@ export class AuthService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     try {
       const { email } = forgotPasswordDto;
-      const user = await this.usersService.findBy({ email }, {}, false);
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
