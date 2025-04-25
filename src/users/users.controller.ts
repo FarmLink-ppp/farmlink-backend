@@ -1,6 +1,5 @@
 import {
   Body,
-  Controller,
   Get,
   UseInterceptors,
   UploadedFile,

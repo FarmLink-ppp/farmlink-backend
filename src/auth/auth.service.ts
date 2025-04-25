@@ -163,7 +163,7 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const user = await this.usersService.findByOrNull({ email });
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
@@ -210,7 +210,7 @@ export class AuthService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     try {
       const { email } = forgotPasswordDto;
-      const user = await this.usersService.findByOrNull({ email });
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
@@ -283,9 +283,10 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token payload');
       }
 
-      const user = await this.usersService.findByOrNull(
+      const user = await this.usersService.findBy(
         { id: userId },
         { refresh_token: true, refresh_token_expires: true },
+        false,
       );
 
       if (!user || !user.refresh_token) {

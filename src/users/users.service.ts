@@ -37,25 +37,18 @@ export class UsersService {
     });
   }
 
-  async findBy(where: Prisma.UserWhereUniqueInput, select?: Prisma.UserSelect) {
-    const user = await this.prisma.user.findUnique({
-      where,
-      select: { ...this.userSafeFields, ...select },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
-  }
-
-  async findByOrNull(
+  async findBy(
     where: Prisma.UserWhereUniqueInput,
     select?: Prisma.UserSelect,
+    throwIfNotFound: boolean = true,
   ) {
     const user = await this.prisma.user.findUnique({
       where,
       select: { ...this.userSafeFields, ...select },
     });
+    if (!user && throwIfNotFound) {
+      throw new NotFoundException('User not found');
+    }
     return user;
   }
 
@@ -67,17 +60,8 @@ export class UsersService {
     });
   }
 
-  async findAll() {
-    return await this.prisma.user.findMany({
-      select: this.userSafeFields,
-    });
-  }
-
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findBy({ id });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
 
     // check if email or username already exists
     if (updateUserDto.email || updateUserDto.username)
@@ -96,14 +80,14 @@ export class UsersService {
     return await this.prisma.user.update({
       where: { id },
       data: {
-        username: updateUserDto.username ?? user.username,
-        email: updateUserDto.email ?? user.email,
-        full_name: updateUserDto.fullName ?? user.full_name,
-        profile_image: updateUserDto.profileImage ?? user.profile_image,
-        bio: updateUserDto.bio ?? user.bio,
-        location: updateUserDto.location ?? user.location,
-        password_hash: updateUserDto.password ?? user.password_hash,
-        account_type: updateUserDto.accountType ?? user.account_type,
+        username: updateUserDto.username ?? user!.username,
+        email: updateUserDto.email ?? user!.email,
+        full_name: updateUserDto.fullName ?? user!.full_name,
+        profile_image: updateUserDto.profileImage ?? user!.profile_image,
+        bio: updateUserDto.bio ?? user!.bio,
+        location: updateUserDto.location ?? user!.location,
+        password_hash: updateUserDto.password ?? user!.password_hash,
+        account_type: updateUserDto.accountType ?? user!.account_type,
       },
       select: this.userSafeFields,
     });
@@ -116,10 +100,7 @@ export class UsersService {
   }
 
   async verifyUser(id: number): Promise<void> {
-    const user = await this.findBy({ id });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    await this.findBy({ id });
 
     await this.prisma.user.update({
       where: { id },
@@ -181,10 +162,7 @@ export class UsersService {
   }
 
   async remove(id: number) {
-    const user = await this.findBy({ id });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    await this.findBy({ id });
 
     return await this.prisma.user.delete({
       where: { id },
