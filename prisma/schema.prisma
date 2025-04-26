@@ -55,9 +55,10 @@ enum AccountType {
 }
 
 model Follow {
-  id          Int @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   follower_id Int
   followed_id Int
+  status      FollowStatus @default(PENDING)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -67,6 +68,12 @@ model Follow {
 
   @@unique([follower_id, followed_id])
   @@map("follows")
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model ForumPost {

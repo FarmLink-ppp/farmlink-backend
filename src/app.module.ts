@@ -18,6 +18,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { WorkerModule } from './worker/worker.module';
+import { FollowModule } from './follow/follow.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { WorkerModule } from './worker/worker.module';
     LandDivisionModule,
     TasksModule,
     WorkerModule,
+    FollowModule,
   ],
   controllers: [AppController],
   providers: [
