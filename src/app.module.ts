@@ -17,6 +17,7 @@ import { LandDivisionModule } from './land-division/land-division.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { WorkerModule } from './worker/worker.module';
 import { FollowModule } from './follow/follow.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { FollowModule } from './follow/follow.module';
     PlantModule,
     LandDivisionModule,
     TasksModule,
+    WorkerModule,
     FollowModule,
   ],
   controllers: [AppController],
