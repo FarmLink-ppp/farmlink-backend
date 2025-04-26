@@ -5,9 +5,9 @@ import {
   UploadedFile,
   Param,
   Req,
-  ParseFilePipeBuilder,
   Patch,
   Post,
+  BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -47,7 +47,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: diskStorage({
-        destination: './uploads/users/profile-images',
+        destination: './uploads/users',
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -55,6 +55,15 @@ export class UsersController {
           cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/i)) {
+          return cb(new BadRequestException('Invalid file type'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 1024 * 1024 * 1,
+      },
     }),
   )
   @ApiOperation({ summary: 'Update user profile image' })
@@ -75,15 +84,7 @@ export class UsersController {
     },
   })
   async uploadProfileImage(
-    @UploadedFile(
-      new ParseFilePipeBuilder()
-        .addFileTypeValidator({ fileType: 'image/*' })
-        .addMaxSizeValidator({
-          maxSize: 1024 * 1024 * 1,
-        })
-        .build({ errorHttpStatusCode: 422 }),
-    )
-    file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
     const imageUrl = `/uploads/users/profile-images/${file.filename}`;

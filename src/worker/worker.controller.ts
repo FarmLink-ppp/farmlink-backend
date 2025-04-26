@@ -11,7 +11,6 @@ import {
   ParseIntPipe,
   Req,
   Query,
-  ParseFilePipeBuilder,
   ParseEnumPipe,
 } from '@nestjs/common';
 import { WorkerService } from './worker.service';
@@ -20,6 +19,7 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { EmploymentStatus } from '@prisma/client';
 import {
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -166,7 +166,7 @@ export class WorkerController {
   }
 
   @Post(':id/profile-image')
-  @ApiOperation({ summary: 'upload image' })
+  @ApiOperation({ summary: 'Upload worker image' })
   @ApiResponse({
     status: 200,
     description: 'image uploaded successfully',
@@ -180,10 +180,22 @@ export class WorkerController {
     description: 'worker ID',
     type: Number,
   })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        profileImage: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: diskStorage({
-        destination: './uploads/workers/profile-images',
+        destination: './uploads/workers',
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -191,21 +203,21 @@ export class WorkerController {
           cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/i)) {
+          return cb(new BadRequestException('Invalid file type'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 1024 * 1024 * 1,
+      },
     }),
   )
   async uploadProfileImage(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile(
-      new ParseFilePipeBuilder()
-        .addFileTypeValidator({ fileType: 'image/*' })
-        .addMaxSizeValidator({
-          maxSize: 1024 * 1024 * 1,
-        })
-        .build({ errorHttpStatusCode: 422 }),
-    )
-    file: Express.Multer.File,
-    @Req()
-    req: RequestWithUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: RequestWithUser,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
