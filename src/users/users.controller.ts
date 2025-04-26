@@ -1,6 +1,5 @@
 import {
   Body,
-  Controller,
   Get,
   UseInterceptors,
   UploadedFile,
@@ -48,7 +47,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: diskStorage({
-        destination: './uploads/profile-images',
+        destination: './uploads/users/profile-images',
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -87,7 +86,7 @@ export class UsersController {
     file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
-    const imageUrl = `/uploads/profile-images/${file.filename}`;
+    const imageUrl = `/uploads/users/profile-images/${file.filename}`;
     await this.usersService.update(req.user.id, {
       profileImage: imageUrl,
     });

@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete,  Request,UseInterceptors, UploadedFile,BadRequestException, ParseIntPipe } from '@nestjs/common';
+import {
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  ParseIntPipe,
+  Req,
+  Query,
+  ParseFilePipeBuilder,
+} from '@nestjs/common';
 import { WorkerService } from './worker.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
@@ -15,62 +29,67 @@ import { ApiController } from 'src/common/decorators/custom-controller.decorator
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { FileInterceptor } from '@nestjs/platform-express';
-
-
+import { RequestWithUser } from 'src/common/types/auth.types';
 
 @Auth()
 @ApiController('worker')
-
 export class WorkerController {
   constructor(private readonly workerService: WorkerService) {}
 
-   @Post()
-   @ApiOperation({ summary: 'Create worker' })
-   @ApiBody({
-     description: 'Create worker',
-     type: CreateWorkerDto,
-   })
-   @ApiResponse({
-     status: 201,
-     description: 'worker created successfully',
-   })
-   @ApiResponse({
-     status: 400,
-     description: 'Validation error',
-   })
-   create(@Body() data: CreateWorkerDto, @Request() req) {
-    return this.workerService.createWorker(data, req.user.id);
+  @Post()
+  @ApiOperation({ summary: 'Create worker' })
+  @ApiBody({
+    description: 'Create worker',
+    type: CreateWorkerDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'worker created successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error',
+  })
+  create(
+    @Body() createWorkerDto: CreateWorkerDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workerService.createWorker(createWorkerDto, req.user.id);
   }
 
- 
-
-
-  @Get('employer/:employerId')
+  @Get('employer')
   @ApiOperation({ summary: 'Get workers by employer ID' })
   @ApiResponse({
     status: 200,
     description: 'workers retrieved successfully',
   })
-
-  findByEmployer( @Request() req)
- {
+  findByEmployer(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.workerService.findByEmployer( userId);
+    return this.workerService.findByEmployer(userId);
   }
 
-
-  @Get('status/:status')
+  @Get()
   @ApiOperation({ summary: 'Get workers by status' })
   @ApiResponse({
     status: 200,
     description: 'workers retrieved successfully',
   })
-
-  findByStatus(@Param('status') status: EmploymentStatus,
-  @Request() req) {
-    const userId = req.user.id;
-    return this.workerService.findByStatus(status, userId);
-   }
+  @ApiResponse({
+    status: 404,
+    description: 'Worker not found',
+  })
+  @ApiQuery({
+    name: 'status',
+    enum: EmploymentStatus,
+    required: true,
+    description: 'Worker employment status',
+  })
+  findByStatus(
+    @Query('status') status: EmploymentStatus,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workerService.findByStatus(status, req.user.id);
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get worker by ID' })
@@ -78,50 +97,54 @@ export class WorkerController {
     status: 200,
     description: 'worker retrieved successfully',
   })
-
-  findOneWorker(@Param('id',ParseIntPipe) id: number,
-  @Request() req) {
-    const userId = req.user.id;
-    return this.workerService.findOneWorker(id, userId);
+  @ApiResponse({
+    status: 404,
+    description: 'Worker not found',
+  })
+  @ApiParam({ name: 'id', type: Number, description: 'worker ID' })
+  findOneWorker(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workerService.findOneWorker(id, req.user.id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update worker' })
-    @ApiResponse({
-      status: 200,
-      description: 'worker updated successfully',
-    })
-    @ApiResponse({
-      status: 400,
-      description: 'Validation error',
-    })
-    @ApiBody({
-      description: 'Update worker',
-      type: UpdateWorkerDto,
-    })
-    @ApiParam({
-      name: 'id',
-      description: 'worker ID',
-      type: Number,
-    })
-  
-  
-    updateWorker(
-    @Param('id',ParseIntPipe) id: number, 
+  @ApiResponse({
+    status: 200,
+    description: 'Worker updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Worker not found',
+  })
+  @ApiBody({
+    description: 'Update worker',
+    type: UpdateWorkerDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'worker ID',
+    type: Number,
+  })
+  updateWorker(
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateWorkerDto: UpdateWorkerDto,
-    @Request() req
+    @Req() req: RequestWithUser,
   ) {
-
-    const userId = req.user.id;
-    return this.workerService.updateWorker(id, updateWorkerDto, userId);
+    return this.workerService.updateWorker(id, updateWorkerDto, req.user.id);
   }
-  
-  
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete worker' })
   @ApiResponse({
     status: 200,
-    description: 'worker deleted successfully',
+    description: 'Worker deleted successfully',
   })
   @ApiResponse({
     status: 400,
@@ -132,12 +155,12 @@ export class WorkerController {
     description: 'worker ID',
     type: Number,
   })
-  removeWorker(@Param('id',ParseIntPipe) id: number,
-  @Request() req) {
-    const userId = req.user.id;
-    return this.workerService.removeWorker(id,userId);
+  removeWorker(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workerService.removeWorker(id, req.user.id);
   }
-
 
   @Post(':id/profile-image')
   @ApiOperation({ summary: 'upload image' })
@@ -155,44 +178,41 @@ export class WorkerController {
     type: Number,
   })
   @UseInterceptors(
-    FileInterceptor('image', {
+    FileInterceptor('profileImage', {
       storage: diskStorage({
-        destination: './uploads/profile-images',
-        filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        destination: './uploads/workers/profile-images',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
-          const filename = `worker-${req.params.id}-${uniqueSuffix}${ext}`;
-          callback(null, filename);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
-      fileFilter: (req, file, callback) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-          return callback(new BadRequestException('Only image files are allowed!'), false);
-        }
-        callback(null, true);
-      },
-      limits: {
-        fileSize: 1024 * 1024 * 1, // 1MB
-      },
     }),
   )
   async uploadProfileImage(
-    @Param('id',ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ fileType: 'image/*' })
+        .addMaxSizeValidator({
+          maxSize: 1024 * 1024 * 1,
+        })
+        .build({ errorHttpStatusCode: 422 }),
+    )
+    file: Express.Multer.File,
+    @Req()
+    req: RequestWithUser,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    // Créer l'URL de l'image
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/profile-images/${file.filename}`;
-    
-    return this.workerService.updateProfileImage(id, imageUrl, req.user.id);
+    const imageUrl = `/uploads/workers/profile-images/${file.filename}`;
+    await this.workerService.updateProfileImage(id, imageUrl, req.user.id);
+    return {
+      message: 'Profile image updated successfully',
+      imageUrl,
+    };
   }
-
-
-
-
-
 }
