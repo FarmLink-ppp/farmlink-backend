@@ -19,6 +19,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { WorkerModule } from './worker/worker.module';
 import { FollowModule } from './follow/follow.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { FollowModule } from './follow/follow.module';
     TasksModule,
     WorkerModule,
     FollowModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
   providers: [

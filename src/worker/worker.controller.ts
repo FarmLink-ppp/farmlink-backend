@@ -5,9 +5,7 @@ import {
   Patch,
   Param,
   Delete,
-  UseInterceptors,
   UploadedFile,
-  BadRequestException,
   ParseIntPipe,
   Req,
   Query,
@@ -19,7 +17,6 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { EmploymentStatus } from '@prisma/client';
 import {
   ApiBody,
-  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -27,15 +24,17 @@ import {
 } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { RequestWithUser } from 'src/common/types/auth.types';
+import { FileUpload } from 'src/common/decorators/file-upload.decorator';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 
 @Auth()
 @ApiController('worker')
 export class WorkerController {
-  constructor(private readonly workerService: WorkerService) {}
+  constructor(
+    private readonly workerService: WorkerService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create worker' })
@@ -166,64 +165,26 @@ export class WorkerController {
   }
 
   @Post(':id/profile-image')
-  @ApiOperation({ summary: 'Upload worker image' })
   @ApiResponse({
     status: 200,
     description: 'image uploaded successfully',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation error',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'worker ID',
-    type: Number,
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        profileImage: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @UseInterceptors(
-    FileInterceptor('profileImage', {
-      storage: diskStorage({
-        destination: './uploads/workers',
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/i)) {
-          return cb(new BadRequestException('Invalid file type'), false);
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 1024 * 1024 * 1,
-      },
-    }),
+  @FileUpload(
+    'profileImage',
+    './uploads/workers',
+    1024 * 1024 * 1,
+    /\/(jpg|jpeg|png|webp)$/i,
+    'Upload worker image',
   )
   async uploadProfileImage(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
-    const imageUrl = `/uploads/workers/profile-images/${file.filename}`;
+    const imageUrl = this.fileUploadService.processUploadedFile(
+      file,
+      'workers',
+    );
     await this.workerService.updateProfileImage(id, imageUrl, req.user.id);
     return {
       message: 'Profile image updated successfully',
