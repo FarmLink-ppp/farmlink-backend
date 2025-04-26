@@ -12,6 +12,7 @@ import {
   Req,
   Query,
   ParseFilePipeBuilder,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { WorkerService } from './worker.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
@@ -81,11 +82,13 @@ export class WorkerController {
   @ApiQuery({
     name: 'status',
     enum: EmploymentStatus,
+    type: String,
     required: true,
     description: 'Worker employment status',
   })
   findByStatus(
-    @Query('status') status: EmploymentStatus,
+    @Query('status', new ParseEnumPipe(EmploymentStatus))
+    status: EmploymentStatus,
     @Req() req: RequestWithUser,
   ) {
     return this.workerService.findByStatus(status, req.user.id);
