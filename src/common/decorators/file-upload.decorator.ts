@@ -10,13 +10,11 @@ export function FileUpload(
   fileTypeRegex = /\/(jpg|jpeg|png|webp)$/i,
   description = 'Upload file',
 ) {
-  const fileUploadService = new FileUploadService();
-
   return applyDecorators(
     UseInterceptors(
       FileInterceptor(
         fieldName,
-        fileUploadService.createMulterOptions(
+        FileUploadService.createMulterOptions(
           destination,
           fieldName,
           fileSize,

@@ -5,7 +5,7 @@ import { extname } from 'path';
 
 @Injectable()
 export class FileUploadService {
-  createMulterOptions(
+  static createMulterOptions(
     destination: string,
     fieldName = 'file',
     fileSize: number,
