@@ -16,6 +16,10 @@ export class DailyTipService {
 
     const totalTips = await this.prisma.dailyTip.count();
 
+    if (totalTips === 0) {
+      return null;
+    }
+
     const tipIndex = dayOfYear % totalTips;
 
     const tip = await this.prisma.dailyTip.findFirst({

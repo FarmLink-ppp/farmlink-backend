@@ -28,15 +28,13 @@ export async function seedDailyTips(prisma?: PrismaClient) {
 
     await prismaClient.dailyTip.deleteMany({});
 
-    for (const tip of tips) {
-      await prismaClient.dailyTip.createMany({
-        data: {
-          title: tip.title,
-          content: tip.content,
-          category: tip.category,
-        },
-      });
-    }
+    await prismaClient.dailyTip.createMany({
+      data: tips.map((tip) => ({
+        title: tip.title,
+        content: tip.content,
+        category: tip.category,
+      })),
+    });
 
     const count = await prismaClient.dailyTip.count();
     console.log(`Daily tips seeding completed! Added ${count} tips.`);
