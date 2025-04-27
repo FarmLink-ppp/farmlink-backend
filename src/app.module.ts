@@ -20,6 +20,7 @@ import { join } from 'path';
 import { WorkerModule } from './worker/worker.module';
 import { FollowModule } from './follow/follow.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
+import { DailyTipModule } from './daily-tip/daily-tip.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { FileUploadModule } from './file-upload/file-upload.module';
     WorkerModule,
     FollowModule,
     FileUploadModule,
+    DailyTipModule,
   ],
   controllers: [AppController],
   providers: [
