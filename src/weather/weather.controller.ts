@@ -1,14 +1,11 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Get, Query } from '@nestjs/common';
 import { WeatherService } from './weather.service';
-import {
-  ApiBearerAuth,
-  ApiCookieAuth,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@Controller('weather')
+@Auth()
+@ApiController('weather')
 export class WeatherController {
   constructor(private readonly weatherService: WeatherService) {}
 
@@ -23,24 +20,14 @@ export class WeatherController {
     description: 'Bad request',
   })
   @ApiResponse({
-    status: 401,
-    description: 'Unauthorized or invalid API key',
-  })
-  @ApiResponse({
     status: 404,
     description: 'City not found',
   })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many requests',
+  @ApiQuery({
+    name: 'q',
+    description: 'City name to get the weather for',
+    type: String,
   })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error',
-  })
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
   async getWeather(@Query('q') cityName: string) {
     return this.weatherService.getWeather(cityName);
   }

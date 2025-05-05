@@ -11,12 +11,25 @@ import {
   ThrottlerModuleOptions,
 } from '@nestjs/throttler';
 import { WeatherModule } from './weather/weather.module';
+import { FarmModule } from './farm/farm.module';
+import { PlantModule } from './plant/plant.module';
+import { LandDivisionModule } from './land-division/land-division.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { WorkerModule } from './worker/worker.module';
+import { FollowModule } from './follow/follow.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
+import { DailyTipModule } from './daily-tip/daily-tip.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads/',
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
@@ -34,7 +47,14 @@ import { TasksModule } from './tasks/tasks.module';
     PrismaModule,
     AuthModule,
     WeatherModule,
+    FarmModule,
+    PlantModule,
+    LandDivisionModule,
     TasksModule,
+    WorkerModule,
+    FollowModule,
+    FileUploadModule,
+    DailyTipModule,
   ],
   controllers: [AppController],
   providers: [

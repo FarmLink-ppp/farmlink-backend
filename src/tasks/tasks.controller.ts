@@ -1,12 +1,10 @@
 import {
-  Controller,
   Get,
   Post,
   Body,
   Patch,
   Param,
   Query,
-  UseGuards,
   Req,
   ParseEnumPipe,
   Delete,
@@ -15,13 +13,10 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { TaskStatus } from '@prisma/client';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import {
-  ApiBearerAuth,
   ApiBody,
-  ApiCookieAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -29,22 +24,15 @@ import {
 } from '@nestjs/swagger';
 import { UpdateTaskStatusDto } from './dto/update-status.dto';
 import { AssignTaskDto } from './dto/assign-task.dto';
+import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 
-@ApiResponse({
-  status: 401,
-  description: 'Unauthorized',
-})
-@ApiResponse({
-  status: 500,
-  description: 'Internal server error',
-})
-@ApiBearerAuth('JWT-auth')
-@ApiCookieAuth('access-token')
-@UseGuards(JwtAuthGuard)
-@Controller('tasks')
+@Auth()
+@ApiController('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
+  @Post()
   @ApiOperation({ summary: 'Create task' })
   @ApiBody({
     description: 'Create task',
@@ -58,7 +46,6 @@ export class TasksController {
     status: 400,
     description: 'Validation error',
   })
-  @Post()
   createTask(
     @Body() createTaskDto: CreateTaskDto,
     @Req() req: RequestWithUser,
@@ -66,32 +53,32 @@ export class TasksController {
     return this.tasksService.createTask(createTaskDto, req.user.id);
   }
 
+  @Get()
   @ApiOperation({ summary: 'Get tasks by user ID' })
   @ApiResponse({
     status: 200,
     description: 'Tasks retrieved successfully',
   })
-  @Get()
   getTasksForUser(@Req() req: RequestWithUser) {
     return this.tasksService.getTasksForUser(req.user.id);
   }
 
+  @Get('today')
   @ApiOperation({ summary: 'Get tasks to be done by today' })
   @ApiResponse({
     status: 200,
     description: 'Task retrieved successfully',
   })
-  @Get('today')
   getTasksToBeDoneByToday(@Req() req: RequestWithUser) {
     return this.tasksService.getTasksToBeDoneByToday(req.user.id);
   }
 
+  @Get('by-status')
   @ApiOperation({ summary: 'Get tasks by status' })
   @ApiResponse({
     status: 200,
     description: 'Tasks retrieved successfully',
   })
-  @Get('by-status')
   @ApiQuery({ name: 'status', enum: TaskStatus, required: true, type: String })
   getTasksByStatus(
     @Query('status', new ParseEnumPipe(TaskStatus)) status: TaskStatus,
@@ -100,17 +87,8 @@ export class TasksController {
     return this.tasksService.getTasksByStatus(req.user.id, status);
   }
 
+  @Patch(':id')
   @ApiOperation({ summary: 'Update task' })
-  @ApiParam({
-    name: 'id',
-    description: 'Task ID',
-    required: true,
-    type: Number,
-  })
-  @ApiBody({
-    description: 'Update task',
-    type: UpdateTaskDto,
-  })
   @ApiResponse({
     status: 200,
     description: 'Task updated successfully',
@@ -119,7 +97,15 @@ export class TasksController {
     status: 400,
     description: 'Validation error',
   })
-  @Patch(':id')
+  @ApiBody({
+    description: 'Update task',
+    type: UpdateTaskDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Task ID',
+    type: Number,
+  })
   updateTask(
     @Param('id', ParseIntPipe) taskId: number,
     @Body() updateTaskDto: UpdateTaskDto,
@@ -128,17 +114,8 @@ export class TasksController {
     return this.tasksService.updateTask(taskId, updateTaskDto, req.user.id);
   }
 
+  @Patch(':id/status')
   @ApiOperation({ summary: 'Update task status' })
-  @ApiParam({
-    name: 'id',
-    description: 'Task ID',
-    required: true,
-    type: Number,
-  })
-  @ApiBody({
-    description: 'Update task status',
-    type: UpdateTaskStatusDto,
-  })
   @ApiResponse({
     status: 200,
     description: 'Task status updated successfully',
@@ -147,7 +124,15 @@ export class TasksController {
     status: 400,
     description: 'Validation error',
   })
-  @Patch(':id/status')
+  @ApiParam({
+    name: 'id',
+    description: 'Task ID',
+    type: Number,
+  })
+  @ApiBody({
+    description: 'Update task status',
+    type: UpdateTaskStatusDto,
+  })
   updateStatus(
     @Param('id', ParseIntPipe) taskId: number,
     @Body() updateStatusDto: UpdateTaskStatusDto,
@@ -160,17 +145,8 @@ export class TasksController {
     );
   }
 
+  @Post(':id/assign')
   @ApiOperation({ summary: 'Assign worker to task' })
-  @ApiParam({
-    name: 'id',
-    description: 'Task ID',
-    required: true,
-    type: Number,
-  })
-  @ApiBody({
-    description: 'Assign worker to task',
-    type: AssignTaskDto,
-  })
   @ApiResponse({
     status: 200,
     description: 'Worker assigned to task successfully',
@@ -179,7 +155,15 @@ export class TasksController {
     status: 400,
     description: 'Validation error',
   })
-  @Post(':id/assign')
+  @ApiParam({
+    name: 'id',
+    description: 'Task ID',
+    type: Number,
+  })
+  @ApiBody({
+    description: 'Assign worker to task',
+    type: AssignTaskDto,
+  })
   assignWorker(
     @Param('id', ParseIntPipe) taskId: number,
     @Body() assignTaskDto: AssignTaskDto,
@@ -192,13 +176,8 @@ export class TasksController {
     );
   }
 
+  @Delete(':id')
   @ApiOperation({ summary: 'Delete task' })
-  @ApiParam({
-    name: 'id',
-    description: 'Task ID',
-    required: true,
-    type: Number,
-  })
   @ApiResponse({
     status: 200,
     description: 'Task deleted successfully',
@@ -207,7 +186,11 @@ export class TasksController {
     status: 400,
     description: 'Validation error',
   })
-  @Delete(':id')
+  @ApiParam({
+    name: 'id',
+    description: 'Task ID',
+    type: Number,
+  })
   deleteTask(
     @Param('id', ParseIntPipe) taskId: number,
     @Req() req: RequestWithUser,
