@@ -54,7 +54,7 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
-    const imageUrl = this.fileUploadService.processUploadedFile(file, 'users');
+    const imageUrl = this.fileUploadService.generateFilePath(file, 'users');
     await this.usersService.update(req.user.id, {
       profileImage: imageUrl,
     });

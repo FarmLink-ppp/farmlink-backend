@@ -344,11 +344,9 @@ model ResourceUsage {
 }
 
 model PlantHealthScan {
-  id         Int      @id @default(autoincrement())
-  image_url  String
-  plant_type String
-  scan_date  DateTime @default(now())
-  notes      String?
+  id        Int      @id @default(autoincrement())
+  image_url String
+  scan_date DateTime @default(now())
 
   user_id    Int
   user       User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -360,13 +358,14 @@ model PlantHealthScan {
 }
 
 model PlantHealthDiagnostic {
-  id                Int      @id @default(autoincrement())
-  issue_detected    Boolean
-  disease_name      String?
-  confidence_score  Float?
-  description       String?
-  suggested_actions String?
-  created_at        DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  issue_detected   Boolean
+  disease_name     String
+  confidence_score Float
+  description      String
+  treatment        String
+  prevention       String
+  created_at       DateTime @default(now())
 
   scan_id Int              @unique
   scan    PlantHealthScan? @relation(fields: [scan_id], references: [id], onDelete: Cascade)
