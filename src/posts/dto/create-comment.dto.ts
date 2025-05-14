@@ -8,11 +8,4 @@ export class CreateCommentDto {
         required: true,
       })
     content: string;
-    @IsNumber()
-    @ApiProperty({
-        title: 'the id of the post',
-        example: 1,
-        required: true,
-      })
-    postId: number;
   }
