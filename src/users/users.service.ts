@@ -52,10 +52,10 @@ export class UsersService {
     return user;
   }
 
-  async findByCredentials(username: string) {
+  async findByCredentials(credential: string) {
     return await this.prisma.user.findFirst({
       where: {
-        OR: [{ username }, { email: username }],
+        OR: [{ username: credential }, { email: credential }],
       },
     });
   }
