@@ -6,3 +6,4 @@
 */
 -- AlterTable
 ALTER TABLE "forum_posts" DROP COLUMN "title";
+ALTER TABLE "forum_posts" ALTER COLUMN "content" DROP NOT NULL;
