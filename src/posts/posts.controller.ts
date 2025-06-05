@@ -56,7 +56,7 @@ export class PostsController {
   }
 
   @Post('comment/:postId')
-  async createComment(
+  createComment(
     @Param('postId', ParseIntPipe) postId: number,
     @Body() dto: CreateCommentDto,
     @Req() req: RequestWithUser,
@@ -86,8 +86,16 @@ export class PostsController {
   }
 
   @Get('comments/:postId')
-  getPostComments(@Param('postId', ParseIntPipe) postId: number) {
-    return this.postsService.getPostComments(postId);
+  getPostComments(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.getPostInteractions(
+      req.user.id,
+      postId,
+      'postComment',
+      'view comments on',
+    );
   }
 
   @Post('like/:postId')
@@ -107,16 +115,24 @@ export class PostsController {
   }
 
   @Get('likes/:postId')
-  getPostLikes(@Param('postId', ParseIntPipe) postId: number) {
-    return this.postsService.getPostLikes(postId);
-  }
-
-  @Post('share/:postId')
-  async sharePost(
+  getPostLikes(
     @Param('postId', ParseIntPipe) postId: number,
     @Req() req: RequestWithUser,
   ) {
-    return await this.postsService.sharePost(req.user.id, postId);
+    return this.postsService.getPostInteractions(
+      req.user.id,
+      postId,
+      'postLike',
+      'view likes on',
+    );
+  }
+
+  @Post('share/:postId')
+  sharePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.sharePost(req.user.id, postId);
   }
 
   @Delete('share/:postId')
@@ -128,7 +144,15 @@ export class PostsController {
   }
 
   @Get('shares/:postId')
-  getPostShares(@Param('postId', ParseIntPipe) postId: number) {
-    return this.postsService.getPostShares(postId);
+  getPostShares(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.getPostInteractions(
+      req.user.id,
+      postId,
+      'sharedPost',
+      'view shares on',
+    );
   }
 }

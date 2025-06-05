@@ -48,22 +48,8 @@ export class PostsService {
       include: { user: true },
     });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.user.account_type === AccountType.PRIVATE) {
-      // Check if the current user is following the post's author
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
 
-      // If the user is not following the profile, deny access
-      if (!isFollowing) {
-        throw new ForbiddenException(
-          'This post is private. You must follow the user to view it.',
-        );
-      }
-    }
+    await this.checkPrivatePostAccess(userId, post, 'view');
 
     return post;
   }
@@ -156,9 +142,8 @@ export class PostsService {
     postId: number,
     dto: CreateCommentDto,
   ): Promise<PostComment> {
-    // Check if post exists and is accessible
     const post = await this.prisma.forumPost.findUnique({
-      where: { id: postId }, // Use the postId passed as a parameter
+      where: { id: postId },
       include: { user: true },
     });
 
@@ -166,26 +151,13 @@ export class PostsService {
       throw new NotFoundException('Post not found');
     }
 
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === AccountType.PRIVATE) {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
+    await this.checkPrivatePostAccess(userId, post, 'comment on');
 
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot comment on private post');
-      }
-    }
-
-    // Create and return the new comment
     return this.prisma.postComment.create({
       data: {
         content: dto.content,
         user_id: userId,
-        post_id: postId, // Use the postId passed as a parameter
+        post_id: postId,
       },
     });
   }
@@ -263,18 +235,7 @@ export class PostsService {
       throw new BadRequestException('Post already liked');
     }
 
-    if (post.user.account_type === AccountType.PRIVATE) {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
-
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot like private post');
-      }
-    }
+    await this.checkPrivatePostAccess(userId, post, 'like');
 
     return this.prisma.postLike.create({
       data: {
@@ -302,7 +263,6 @@ export class PostsService {
   }
 
   async sharePost(userId: number, postId: number) {
-    // Check if post exists
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
       include: { user: true },
@@ -312,7 +272,6 @@ export class PostsService {
       throw new NotFoundException('Post not found');
     }
 
-    // Check if already shared
     const existingShare = await this.prisma.sharedPost.findFirst({
       where: {
         user_id: userId,
@@ -324,21 +283,8 @@ export class PostsService {
       throw new BadRequestException('Post already shared');
     }
 
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === AccountType.PRIVATE) {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
+    await this.checkPrivatePostAccess(userId, post, 'share');
 
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot share private post');
-      }
-    }
-
-    // Share the post
     const sharedPost = await this.prisma.sharedPost.create({
       data: {
         user_id: userId,
@@ -366,8 +312,15 @@ export class PostsService {
     });
   }
 
-  async getPostComments(postId: number) {
-    return this.prisma.postComment.findMany({
+  async getPostInteractions(
+    userId: number,
+    postId: number,
+    model: 'postComment' | 'postLike' | 'sharedPost',
+    action: string,
+  ) {
+    await this.checkPrivatePostAccess(userId, postId, action);
+
+    const baseQuery = {
       where: { post_id: postId },
       include: {
         user: {
@@ -379,39 +332,47 @@ export class PostsService {
           },
         },
       },
-      orderBy: { created_at: 'desc' },
-    });
+    };
+
+    switch (model) {
+      case 'postComment':
+        return this.prisma.postComment.findMany({
+          ...baseQuery,
+          orderBy: { created_at: 'desc' },
+        });
+      case 'postLike':
+        return this.prisma.postLike.findMany(baseQuery);
+      case 'sharedPost':
+        return this.prisma.sharedPost.findMany(baseQuery);
+      default:
+        throw new BadRequestException('Invalid model type');
+    }
   }
 
-  async getPostLikes(postId: number) {
-    return this.prisma.postLike.findMany({
-      where: { post_id: postId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            account_type: true,
-            profile_image: true,
-          },
+  private async checkPrivatePostAccess(
+    userId: number,
+    post: any,
+    action: string,
+  ) {
+    if (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      post.user.account_type === AccountType.PRIVATE &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      post.user_id !== userId
+    ) {
+      const isFollowing = await this.prisma.follow.findFirst({
+        where: {
+          follower_id: userId,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          followed_id: post.user.id,
         },
-      },
-    });
-  }
+      });
 
-  async getPostShares(postId: number) {
-    return this.prisma.sharedPost.findMany({
-      where: { post_id: postId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            account_type: true,
-            profile_image: true,
-          },
-        },
-      },
-    });
+      if (!isFollowing) {
+        throw new ForbiddenException(
+          `Cannot ${action} private post. You must follow the user first.`,
+        );
+      }
+    }
   }
 }
