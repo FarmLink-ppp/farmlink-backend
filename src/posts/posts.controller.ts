@@ -131,25 +131,4 @@ export class PostsController {
   getPostShares(@Param('postId', ParseIntPipe) postId: number) {
     return this.postsService.getPostShares(postId);
   }
-
-  @Post('save/:postId')
-  async savePost(
-    @Param('postId', ParseIntPipe) postId: number,
-    @Req() req: RequestWithUser,
-  ) {
-    return await this.postsService.savePost(req.user.id, postId);
-  }
-
-  @Delete('save/:postId')
-  unsavePost(
-    @Param('postId', ParseIntPipe) postId: number,
-    @Req() req: RequestWithUser,
-  ) {
-    return this.postsService.unsavePost(req.user.id, postId);
-  }
-
-  @Get('saves/:postId')
-  getPostSaves(@Param('postId', ParseIntPipe) postId: number) {
-    return this.postsService.getPostSaves(postId);
-  }
 }

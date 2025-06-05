@@ -349,54 +349,6 @@ export class PostsService {
     return sharedPost;
   }
 
-  async savePost(userId: number, postId: number) {
-    // Check if post exists
-    const post = await this.prisma.forumPost.findUnique({
-      where: { id: postId },
-      include: { user: true },
-    });
-
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    // Check if already shared
-    const existingSave = await this.prisma.savedPost.findFirst({
-      where: {
-        user_id: userId,
-        post_id: postId,
-      },
-    });
-
-    if (existingSave) {
-      throw new BadRequestException('Post already saved');
-    }
-
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === AccountType.PRIVATE) {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
-
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot save private post');
-      }
-    }
-
-    // Share the post
-    const savedPost = await this.prisma.savedPost.create({
-      data: {
-        user_id: userId,
-        post_id: postId,
-      },
-    });
-
-    return savedPost;
-  }
-
   async unsharePost(userId: number, postId: number) {
     const share = await this.prisma.sharedPost.findFirst({
       where: {
@@ -411,23 +363,6 @@ export class PostsService {
 
     await this.prisma.sharedPost.delete({
       where: { id: share.id },
-    });
-  }
-
-  async unsavePost(userId: number, postId: number) {
-    const save = await this.prisma.savedPost.findFirst({
-      where: {
-        user_id: userId,
-        post_id: postId,
-      },
-    });
-
-    if (!save) {
-      throw new NotFoundException('Save not found');
-    }
-
-    await this.prisma.savedPost.delete({
-      where: { id: save.id },
     });
   }
 
@@ -466,22 +401,6 @@ export class PostsService {
 
   async getPostShares(postId: number) {
     return this.prisma.sharedPost.findMany({
-      where: { post_id: postId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            account_type: true,
-            profile_image: true,
-          },
-        },
-      },
-    });
-  }
-
-  async getPostSaves(postId: number) {
-    return this.prisma.savedPost.findMany({
       where: { post_id: postId },
       include: {
         user: {

@@ -39,7 +39,6 @@ model User {
   forum_posts           ForumPost[]
   post_comments         PostComment[]
   post_likes            PostLike[]
-  post_saves            SavedPost[]
   shared_posts          SharedPost[]
   tasks                 Task[]
   workers               Worker[]
@@ -89,7 +88,6 @@ model ForumPost {
   user     User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   comments PostComment[]
   likes    PostLike[]
-  saves    SavedPost[]
   shares   SharedPost[]
 
   @@index([user_id])
@@ -134,20 +132,6 @@ model PostLike {
   @@unique([user_id, post_id])
   @@index([post_id])
   @@map("post_likes")
-}
-
-model SavedPost {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-
-  user_id Int
-  post_id Int
-  user    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  post    ForumPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, post_id])
-  @@index([post_id])
-  @@map("saved_posts")
 }
 
 model SharedPost {
