@@ -38,7 +38,7 @@ export class PostsController {
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {
-    return this.postsService.findOne(req.user.id, id);
+    return this.postsService.findOne(req.user.id, id, 'view');
   }
 
   @Patch(':id')

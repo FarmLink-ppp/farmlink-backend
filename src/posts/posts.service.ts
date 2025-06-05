@@ -42,14 +42,14 @@ export class PostsService {
     });
   }
 
-  async findOne(userId: number, postId: number) {
+  async findOne(userId: number, postId: number, action: string) {
     const post = await this.prisma.forumPost.findFirst({
       where: { id: postId },
       include: { user: true },
     });
     if (!post) throw new NotFoundException('Post not found');
 
-    await this.checkPrivatePostAccess(userId, post, 'view');
+    await this.checkPrivatePostAccess(userId, post, action);
 
     return post;
   }
@@ -318,7 +318,7 @@ export class PostsService {
     model: 'postComment' | 'postLike' | 'sharedPost',
     action: string,
   ) {
-    await this.checkPrivatePostAccess(userId, postId, action);
+    await this.findOne(userId, postId, action);
 
     const baseQuery = {
       where: { post_id: postId },
