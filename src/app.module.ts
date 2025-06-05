@@ -22,6 +22,7 @@ import { FollowModule } from './follow/follow.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
 import { PlantHealthModule } from './plant-health/plant-health.module';
+import { PostsModule } from './posts/posts.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { PlantHealthModule } from './plant-health/plant-health.module';
     FileUploadModule,
     DailyTipModule,
     PlantHealthModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [
