@@ -25,7 +25,7 @@ export class CreatePostDto {
   @ApiProperty({
     title: 'the category of a post',
     example: PostCategory.DISCUSSIONS,
-    required: true,
+    enum: PostCategory,
   })
   @IsEnum(PostCategory, { message: 'Invalid post category' })
   category: PostCategory;
