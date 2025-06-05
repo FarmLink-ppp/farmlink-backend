@@ -1,177 +1,155 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete , UseGuards, Req} from '@nestjs/common';
+import {
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import {
-  ApiBearerAuth,
-  ApiCookieAuth,
-} from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { CreateCommentDto } from './dto/create-comment.dto';
-@Controller('posts')
+import { Auth } from 'src/common/decorators/auth.decorator';
+import { ApiController } from 'src/common/decorators/custom-controller.decorator';
+import { UpdateCommentDto } from './dto/update-comment.dto';
+@Auth()
+@ApiController('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
+
   @Post()
   create(@Body() createPostDto: CreatePostDto, @Req() req: RequestWithUser) {
-    const userId = req.user.id; 
-      return this.postsService.create(userId, createPostDto);
-
+    return this.postsService.create(req.user.id, createPostDto);
   }
 
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.postsService.findAll();
   }
 
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
   @Get('feed')
   getFeed(@Req() req: RequestWithUser) {
     return this.postsService.getFeed(req.user.id);
   }
-    @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Post('comment/:postId')  // postId is now a route parameter
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {
+    return this.postsService.findOne(req.user.id, id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePostDto: UpdatePostDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.update(id, req.user.id, updatePostDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {
+    return this.postsService.remove(id, req.user.id);
+  }
+
+  @Post('comment/:postId')
   async createComment(
-    @Param('postId') postId: number,  // Capture postId from the route
-    @Body() dto: CreateCommentDto,    // The dto now only contains comment data
-    @Req() req: RequestWithUser       // Get user info from the request object
+    @Param('postId', ParseIntPipe) postId: number,
+    @Body() dto: CreateCommentDto,
+    @Req() req: RequestWithUser,
   ) {
     return this.postsService.createComment(req.user.id, postId, dto);
   }
 
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Post('/like/:postId')
-  likePost(@Req() req, @Param('postId') postId: string) {
-  return this.postsService.likePost(req.user.id, parseInt(postId));
-}
-
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Delete('like/:postId')
-  unlikePost(@Param('postId') postId: string, @Req() req: RequestWithUser) {
-    return this.postsService.unlikePost(req.user.id, Number(postId));
-  }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Post('share/:postId')  // postId is now part of the route parameter
-  async sharePost(
-    @Param('postId') postId: number,  // Capture postId from the route
-    @Req() req: RequestWithUser       // Get user info from the request object
-  ) {
-    // Call the service method with the userId and postId
-    return await this.postsService.sharePost(req.user.id, postId);
-  }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Post('save/:postId')  // postId is now part of the route parameter
-  async savePost(
-    @Param('postId') postId: number,  // Capture postId from the route
-    @Req() req: RequestWithUser       // Get user info from the request object
-  ) {
-    // Call the service method with the userId and postId
-    return await this.postsService.savePost(req.user.id, postId);
-  }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Delete('share/:postId')
-  unsharePost(@Param('postId') postId: string, @Req() req: RequestWithUser) {
-    return this.postsService.unsharePost(req.user.id, Number(postId));
-  }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Delete('save/:postId')
-  unsavepost(@Param('postId') postId: string, @Req() req: RequestWithUser) {
-    return this.postsService.unsavePost(req.user.id, Number(postId));
-  }
-
-  @Patch('/comment/:commentId')
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
+  @Patch('comment/:commentId')
   updateComment(
-    @Param('commentId') commentId: number,
-    @Body() updateCommentDto: CreateCommentDto,
-    @Req() req: RequestWithUser
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Body() updateCommentDto: UpdateCommentDto,
+    @Req() req: RequestWithUser,
   ) {
     return this.postsService.updateComment(
       req.user.id,
       commentId,
-      updateCommentDto
+      updateCommentDto,
     );
   }
 
-  @Delete('/comment/:commentId')
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
+  @Delete('comment/:commentId')
   deleteComment(
-    @Param('commentId') commentId: number,
-    @Req() req: RequestWithUser
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: RequestWithUser,
   ) {
-    return this.postsService.deleteComment(
-      req.user.id,
-      commentId,
-    );
+    return this.postsService.deleteComment(req.user.id, commentId);
   }
 
-
-  @Get('/comments/:postId')
-  getPostComments(@Param('postId') postId: string) {
-    return this.postsService.getPostComments(Number(postId));
+  @Get('comments/:postId')
+  getPostComments(@Param('postId', ParseIntPipe) postId: number) {
+    return this.postsService.getPostComments(postId);
   }
 
-  @Get('/likes/:postId')
-  getPostLikes(@Param('postId') postId: string) {
-    return this.postsService.getPostLikes(Number(postId));
+  @Post('like/:postId')
+  likePost(
+    @Req() req: RequestWithUser,
+    @Param('postId', ParseIntPipe) postId: number,
+  ) {
+    return this.postsService.likePost(req.user.id, postId);
   }
 
-  @Get('/shares/:postId')
-  getPostShares(@Param('postId') postId: string) {
-    return this.postsService.getPostShares(Number(postId));
+  @Delete('like/:postId')
+  unlikePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.unlikePost(req.user.id, postId);
   }
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  findOne(@Param('id') id: number, @Req() req: RequestWithUser) {
-    return this.postsService.findOne(req.user.id,id);
+
+  @Get('likes/:postId')
+  getPostLikes(@Param('postId', ParseIntPipe) postId: number) {
+    return this.postsService.getPostLikes(postId);
   }
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postsService.update(+id, updatePostDto);
+
+  @Post('share/:postId')
+  async sharePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return await this.postsService.sharePost(req.user.id, postId);
   }
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.postsService.remove(+id);
+
+  @Delete('share/:postId')
+  unsharePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.unsharePost(req.user.id, postId);
+  }
+
+  @Get('shares/:postId')
+  getPostShares(@Param('postId', ParseIntPipe) postId: number) {
+    return this.postsService.getPostShares(postId);
+  }
+
+  @Post('save/:postId')
+  async savePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return await this.postsService.savePost(req.user.id, postId);
+  }
+
+  @Delete('save/:postId')
+  unsavePost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.postsService.unsavePost(req.user.id, postId);
+  }
+
+  @Get('saves/:postId')
+  getPostSaves(@Param('postId', ParseIntPipe) postId: number) {
+    return this.postsService.getPostSaves(postId);
   }
 }

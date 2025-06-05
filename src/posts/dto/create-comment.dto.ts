@@ -1,11 +1,11 @@
-import { IsString , IsNumber} from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import { IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 export class CreateCommentDto {
-    @IsString()
-    @ApiProperty({
-        title: 'the text of the comment',
-        example: "very nice",
-        required: true,
-      })
-    content: string;
-  }
+  @ApiProperty({
+    title: 'the text of the comment',
+    example: 'very nice',
+    required: true,
+  })
+  @IsString()
+  content: string;
+}
