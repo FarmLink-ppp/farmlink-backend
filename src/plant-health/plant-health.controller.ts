@@ -1,7 +1,14 @@
 import { PlantHealthService } from './plant-health.service';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 import { Auth } from 'src/common/decorators/auth.decorator';
-import { Post, Req, UploadedFile } from '@nestjs/common';
+import {
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Req,
+  UploadedFile,
+} from '@nestjs/common';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { ApiResponse } from '@nestjs/swagger';
 import { FileUpload } from 'src/common/decorators/file-upload.decorator';
@@ -33,5 +40,23 @@ export class PlantHealthController {
   ) {
     const imageUrl = this.fileUploadService.generateFilePath(file, 'scans');
     return this.plantHealthService.createScan(req.user.id, imageUrl);
+  }
+
+  @Get('scans')
+  getScans(@Req() req: RequestWithUser) {
+    return this.plantHealthService.getScans(req.user.id);
+  }
+
+  @Get('scans/:scanId/diagnosis')
+  getScanDiagnosis(
+    @Req() req: RequestWithUser,
+    @Param('scanId', ParseIntPipe) scanId: number,
+  ) {
+    return this.plantHealthService.getScanDiagnosis(req.user.id, scanId);
+  }
+
+  @Get('diagnosis')
+  getDiagnosis(@Req() req: RequestWithUser) {
+    return this.plantHealthService.getDiagnosis(req.user.id);
   }
 }
