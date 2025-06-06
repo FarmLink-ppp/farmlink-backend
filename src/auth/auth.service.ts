@@ -96,7 +96,7 @@ export class AuthService {
       const {
         token: verificationToken,
         expiresAt: verificationTokenExpiration,
-      } = this.hashService.generateTokenWithExpiration(32, 24);
+      } = this.hashService.generateTokenWithExpiration(16, 24);
 
       await this.usersService.updateVerificationToken(
         newUser.id,
@@ -176,7 +176,7 @@ export class AuthService {
       const {
         token: verificationToken,
         expiresAt: verificationTokenExpiration,
-      } = this.hashService.generateTokenWithExpiration(32, 24);
+      } = this.hashService.generateTokenWithExpiration(16, 24);
 
       await this.usersService.updateVerificationToken(
         user.id,
