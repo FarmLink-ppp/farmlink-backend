@@ -69,4 +69,46 @@ export class PlantHealthService {
       diagnostic: diagnosticRecord,
     };
   }
+
+  async getScans(userId: number) {
+    return this.prisma.plantHealthScan.findMany({
+      where: {
+        user_id: userId,
+      },
+    });
+  }
+
+  async getScanDiagnosis(userId: number, scanId: number) {
+    const scan = await this.prisma.plantHealthScan.findUnique({
+      where: {
+        id: scanId,
+        user_id: userId,
+      },
+      include: {
+        diagnostic: true,
+      },
+    });
+
+    if (!scan) {
+      throw new BadRequestException('Scan not found');
+    }
+
+    return scan.diagnostic;
+  }
+
+  async getDiagnosis(userId: number) {
+    const scans = await this.prisma.plantHealthScan.findMany({
+      where: {
+        user_id: userId,
+      },
+      include: {
+        diagnostic: true,
+      },
+    });
+
+    return scans.map((scan) => ({
+      imageUrl: scan.image_url,
+      diagnostic: scan.diagnostic,
+    }));
+  }
 }
