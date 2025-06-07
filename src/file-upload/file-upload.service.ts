@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
 @Injectable()
 export class FileUploadService {
+  constructor(private readonly configService: ConfigService) {}
+
   static createMulterOptions(
     destination: string,
     fieldName = 'file',
@@ -33,9 +36,9 @@ export class FileUploadService {
     };
   }
 
-  processUploadedFile(file: Express.Multer.File, dir: string) {
+  generateFilePath(file: Express.Multer.File, dir: string) {
     if (!file) throw new BadRequestException('File not found');
 
-    return `/uploads/${dir}/${file.filename}`;
+    return `${this.configService.get<string>('BASE_URL')}/uploads/${dir}/${file.filename}`;
   }
 }

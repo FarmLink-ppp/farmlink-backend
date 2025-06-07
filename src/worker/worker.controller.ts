@@ -181,10 +181,7 @@ export class WorkerController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
-    const imageUrl = this.fileUploadService.processUploadedFile(
-      file,
-      'workers',
-    );
+    const imageUrl = this.fileUploadService.generateFilePath(file, 'workers');
     await this.workerService.updateProfileImage(id, imageUrl, req.user.id);
     return {
       message: 'Profile image updated successfully',

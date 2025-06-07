@@ -16,7 +16,7 @@ export class HashService {
   }
 
   generateTokenWithExpiration(
-    byteSize: number = 32,
+    byteSize: number = 16,
     expirationHours: number = 1,
   ) {
     const token = crypto.randomBytes(byteSize).toString('hex');

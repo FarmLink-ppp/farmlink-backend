@@ -21,6 +21,8 @@ import { WorkerModule } from './worker/worker.module';
 import { FollowModule } from './follow/follow.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
+import { PlantHealthModule } from './plant-health/plant-health.module';
+import { PostsModule } from './posts/posts.module';
 
 @Module({
   imports: [
@@ -55,6 +57,8 @@ import { DailyTipModule } from './daily-tip/daily-tip.module';
     FollowModule,
     FileUploadModule,
     DailyTipModule,
+    PlantHealthModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [

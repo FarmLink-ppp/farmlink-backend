@@ -48,8 +48,8 @@ export class LandDivisionService {
     });
   }
 
-  async getLandDivisionsByFarmId(farmId: number, userId: number) {
-    const farm = await this.farmService.getFarmById(farmId, userId);
+  async getLandDivisionsByFarmId(userId: number) {
+    const farm = await this.farmService.getFarmByUserId(userId);
 
     return this.prisma.landDivision.findMany({
       where: { farm_id: farm.id },
@@ -96,7 +96,13 @@ export class LandDivisionService {
           updateLandDivisionDto.cultivationStatus ??
           division.cultivation_status,
         geolocation: updateLandDivisionDto.geolocation ?? division.geolocation,
-        plant_id: updateLandDivisionDto.plantId ?? division.plant_id,
+        plant_id:
+          updateLandDivisionDto.plantId !== undefined
+            ? updateLandDivisionDto.plantId
+            : division.plant_id,
+      },
+      include: {
+        plant: true,
       },
     });
   }
@@ -104,36 +110,16 @@ export class LandDivisionService {
     await this.getLandDivisionById(id, userId);
     return this.prisma.landDivision.delete({
       where: { id },
+      include: {
+        plant: true,
+      },
     });
   }
   async getPlantByLandDivisionId(landDivisionId: number, userId: number) {
-    const landDivision = await this.checkLandDivisionOwnership(
-      landDivisionId,
-      userId,
-    );
+    const landDivision = await this.getLandDivisionById(landDivisionId, userId);
     if (!landDivision.plant_id) {
       throw new NotFoundException('This land division has no plant assigned');
     }
     return this.plantService.getPlantById(landDivision.plant_id);
-  }
-
-  private async checkLandDivisionOwnership(id: number, userId: number) {
-    const division = await this.prisma.landDivision.findUnique({
-      where: { id },
-      include: {
-        farm: {
-          select: {
-            user_id: true,
-          },
-        },
-      },
-    });
-    if (!division) {
-      throw new NotFoundException('Land division not found');
-    }
-    if (division.farm.user_id !== userId) {
-      throw new ForbiddenException('Access to this land division is forbidden');
-    }
-    return division;
   }
 }

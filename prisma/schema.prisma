@@ -39,7 +39,6 @@ model User {
   forum_posts           ForumPost[]
   post_comments         PostComment[]
   post_likes            PostLike[]
-  post_saves            SavedPost[]
   shared_posts          SharedPost[]
   tasks                 Task[]
   workers               Worker[]
@@ -78,8 +77,7 @@ enum FollowStatus {
 
 model ForumPost {
   id         Int          @id @default(autoincrement())
-  title      String
-  content    String
+  content    String?
   image_urls String[]     @default([])
   category   PostCategory @default(DISCUSSIONS)
   view_count Int          @default(0)
@@ -90,7 +88,6 @@ model ForumPost {
   user     User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   comments PostComment[]
   likes    PostLike[]
-  saves    SavedPost[]
   shares   SharedPost[]
 
   @@index([user_id])
@@ -137,20 +134,6 @@ model PostLike {
   @@map("post_likes")
 }
 
-model SavedPost {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-
-  user_id Int
-  post_id Int
-  user    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  post    ForumPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, post_id])
-  @@index([post_id])
-  @@map("saved_posts")
-}
-
 model SharedPost {
   id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
@@ -187,6 +170,7 @@ model Farm {
   user_id   Int            @unique
   user      User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   divisions LandDivision[]
+  Plant     Plant[]
 
   @@map("farms")
 }
@@ -227,6 +211,8 @@ model Plant {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
+  farm_id        Int
+  farm           Farm           @relation(fields: [farm_id], references: [id], onDelete: Cascade)
   land_divisions LandDivision[]
 
   @@map("plants")
@@ -344,11 +330,9 @@ model ResourceUsage {
 }
 
 model PlantHealthScan {
-  id         Int      @id @default(autoincrement())
-  image_url  String
-  plant_type String
-  scan_date  DateTime @default(now())
-  notes      String?
+  id        Int      @id @default(autoincrement())
+  image_url String
+  scan_date DateTime @default(now())
 
   user_id    Int
   user       User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -360,13 +344,14 @@ model PlantHealthScan {
 }
 
 model PlantHealthDiagnostic {
-  id                Int      @id @default(autoincrement())
-  issue_detected    Boolean
-  disease_name      String?
-  confidence_score  Float?
-  description       String?
-  suggested_actions String?
-  created_at        DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  issue_detected   Boolean
+  disease_name     String
+  confidence_score Float
+  description      String
+  treatment        String
+  prevention       String
+  created_at       DateTime @default(now())
 
   scan_id Int              @unique
   scan    PlantHealthScan? @relation(fields: [scan_id], references: [id], onDelete: Cascade)
