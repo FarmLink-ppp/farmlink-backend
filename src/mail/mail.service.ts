@@ -43,11 +43,12 @@ export class EmailService {
     token: string,
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    const verificationUrl = `${frontendUrl}/auth/verify-email?token=${token}`;
+    const verificationUrl = `${frontendUrl}/verify-email`;
 
     const html = this.compileTemplate('email-verification', {
       name,
       verificationUrl,
+      token,
     });
     await this.transporter.sendMail({
       from: `"${this.configService.get<string>('MAIL_FROM_NAME')}" <${this.configService.get<string>('MAIL_FROM')}>`,
@@ -63,11 +64,12 @@ export class EmailService {
     token: string,
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    const resetUrl = `${frontendUrl}/auth/reset-password?token=${token}`;
+    const resetUrl = `${frontendUrl}/reset-password`;
 
     const html = this.compileTemplate('password-reset', {
       name,
       resetUrl,
+      token,
     });
 
     await this.transporter.sendMail({

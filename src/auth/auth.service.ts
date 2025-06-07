@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -96,7 +95,7 @@ export class AuthService {
       const {
         token: verificationToken,
         expiresAt: verificationTokenExpiration,
-      } = this.hashService.generateTokenWithExpiration(32, 24);
+      } = this.hashService.generateTokenWithExpiration(16, 24);
 
       await this.usersService.updateVerificationToken(
         newUser.id,
@@ -163,7 +162,7 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const user = await this.usersService.findByOrNull({ email });
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
@@ -176,7 +175,7 @@ export class AuthService {
       const {
         token: verificationToken,
         expiresAt: verificationTokenExpiration,
-      } = this.hashService.generateTokenWithExpiration(32, 24);
+      } = this.hashService.generateTokenWithExpiration(16, 24);
 
       await this.usersService.updateVerificationToken(
         user.id,
@@ -194,10 +193,7 @@ export class AuthService {
           'If this email is registered and not verified, a verification email has been sent. Please check your inbox or spam folder.',
       };
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof BadRequestException) {
         throw error;
       }
       throw new InternalServerErrorException(
@@ -210,7 +206,7 @@ export class AuthService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     try {
       const { email } = forgotPasswordDto;
-      const user = await this.usersService.findByOrNull({ email });
+      const user = await this.usersService.findBy({ email }, undefined, false);
       if (!user) {
         return {
           message:
@@ -283,9 +279,10 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token payload');
       }
 
-      const user = await this.usersService.findByOrNull(
+      const user = await this.usersService.findBy(
         { id: userId },
         { refresh_token: true, refresh_token_expires: true },
+        false,
       );
 
       if (!user || !user.refresh_token) {

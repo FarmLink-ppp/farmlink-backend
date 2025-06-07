@@ -39,7 +39,6 @@ model User {
   forum_posts           ForumPost[]
   post_comments         PostComment[]
   post_likes            PostLike[]
-  post_saves            SavedPost[]
   shared_posts          SharedPost[]
   tasks                 Task[]
   workers               Worker[]
@@ -55,9 +54,10 @@ enum AccountType {
 }
 
 model Follow {
-  id          Int @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   follower_id Int
   followed_id Int
+  status      FollowStatus @default(PENDING)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -67,6 +67,12 @@ model Follow {
 
   @@unique([follower_id, followed_id])
   @@map("follows")
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model ForumPost {
@@ -82,7 +88,6 @@ model ForumPost {
   user     User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   comments PostComment[]
   likes    PostLike[]
-  saves    SavedPost[]
   shares   SharedPost[]
 
   @@index([user_id])
@@ -129,20 +134,6 @@ model PostLike {
   @@map("post_likes")
 }
 
-model SavedPost {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-
-  user_id Int
-  post_id Int
-  user    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  post    ForumPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, post_id])
-  @@index([post_id])
-  @@map("saved_posts")
-}
-
 model SharedPost {
   id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
@@ -179,6 +170,7 @@ model Farm {
   user_id   Int            @unique
   user      User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   divisions LandDivision[]
+  Plant     Plant[]
 
   @@map("farms")
 }
@@ -193,7 +185,6 @@ model LandDivision {
   id                 Int               @id @default(autoincrement())
   name               String
   area               Float
-  crop_type          String
   cultivation_status CultivationStatus
   geolocation        String
   created_at         DateTime          @default(now())
@@ -204,9 +195,27 @@ model LandDivision {
   resource_usage ResourceUsage[]
   tasks          Task[]
 
+  plant_id Int?
+  plant    Plant? @relation(fields: [plant_id], references: [id], onDelete: SetNull)
+
   @@index([farm_id])
   @@index([cultivation_status])
   @@map("land_divisions")
+}
+
+model Plant {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  image_url   String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  farm_id        Int
+  farm           Farm           @relation(fields: [farm_id], references: [id], onDelete: Cascade)
+  land_divisions LandDivision[]
+
+  @@map("plants")
 }
 
 enum CultivationStatus {
@@ -321,11 +330,9 @@ model ResourceUsage {
 }
 
 model PlantHealthScan {
-  id         Int      @id @default(autoincrement())
-  image_url  String
-  plant_type String
-  scan_date  DateTime @default(now())
-  notes      String?
+  id        Int      @id @default(autoincrement())
+  image_url String
+  scan_date DateTime @default(now())
 
   user_id    Int
   user       User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -337,13 +344,14 @@ model PlantHealthScan {
 }
 
 model PlantHealthDiagnostic {
-  id                Int      @id @default(autoincrement())
-  issue_detected    Boolean
-  disease_name      String?
-  confidence_score  Float?
-  description       String?
-  suggested_actions String?
-  created_at        DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  issue_detected   Boolean
+  disease_name     String
+  confidence_score Float
+  description      String
+  treatment        String
+  prevention       String
+  created_at       DateTime @default(now())
 
   scan_id Int              @unique
   scan    PlantHealthScan? @relation(fields: [scan_id], references: [id], onDelete: Cascade)

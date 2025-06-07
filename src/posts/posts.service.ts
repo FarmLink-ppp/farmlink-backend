@@ -1,20 +1,29 @@
-import { Injectable, NotFoundException , BadRequestException , ForbiddenException} from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from './../prisma/prisma.service';
-import { ForumPost ,PostComment, PostLike, SharedPost } from '@prisma/client';
+import { AccountType, PostComment } from '@prisma/client';
 import { FeedAlgorithmService } from './feed-algorithm.service';
-import { CreateCommentDto} from './dto/create-comment.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
+
 @Injectable()
 export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly feedAlgorithm: FeedAlgorithmService
+    private readonly feedAlgorithm: FeedAlgorithmService,
   ) {}
 
-  async create(userId: number, dto: CreatePostDto): Promise<ForumPost> {
+  async create(userId: number, dto: CreatePostDto) {
     if (!dto.content && (!dto.image_urls || dto.image_urls.length === 0)) {
-      throw new BadRequestException('Post must have either content or at least one image.');
+      throw new BadRequestException(
+        'Post must have either content or at least one image.',
+      );
     }
 
     return this.prisma.forumPost.create({
@@ -27,41 +36,29 @@ export class PostsService {
     });
   }
 
-  async findAll(): Promise<ForumPost[]> {
+  async findAll() {
     return this.prisma.forumPost.findMany({
       orderBy: { created_at: 'desc' },
       include: { user: true },
     });
   }
 
-  async findOne(userId: number, postId: number) {
-    if (!postId || typeof postId !== 'number' || isNaN(postId)) {
-      throw new BadRequestException('Invalid postId');
-    }
-    const post = await this.prisma.forumPost.findUnique({
+  async findOne(userId: number, postId: number, action: string) {
+    const post = await this.prisma.forumPost.findFirst({
       where: { id: postId },
       include: { user: true },
     });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.user.account_type === 'PRIVATE') {
-      // Check if the current user is following the post's author
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
-      // If the user is not following the profile, deny access
-      if (!isFollowing) {
-        throw new ForbiddenException('This post is private. You must follow the user to view it.');
-      }
-    }
-    
+
+    await this.checkPrivatePostAccess(userId, post, action);
+
     return post;
   }
 
-  async update(id: number, dto: UpdatePostDto): Promise<ForumPost> {
-    const post = await this.prisma.forumPost.findUnique({ where: { id } });
+  async update(id: number, userId: number, dto: UpdatePostDto) {
+    const post = await this.prisma.forumPost.findUnique({
+      where: { id, user_id: userId },
+    });
     if (!post) throw new NotFoundException('Post not found');
 
     return this.prisma.forumPost.update({
@@ -74,22 +71,24 @@ export class PostsService {
     });
   }
 
-  async remove(id: number): Promise<ForumPost> {
-    const post = await this.prisma.forumPost.findUnique({ where: { id } });
+  async remove(id: number, userId: number) {
+    const post = await this.prisma.forumPost.findUnique({
+      where: { id, user_id: userId },
+    });
     if (!post) throw new NotFoundException('Post not found');
 
     return this.prisma.forumPost.delete({ where: { id } });
   }
 
-  async getFeed(userId: number): Promise<ForumPost[]> {
+  async getFeed(userId: number) {
     // 1. Get all users the current user is following
     const following = await this.prisma.follow.findMany({
       where: { follower_id: userId },
-      select: { followed_id: true }
+      select: { followed_id: true },
     });
-    
-    const followingIds = following.map(f => f.followed_id);
-    
+
+    const followingIds = following.map((f) => f.followed_id);
+
     // 2. Get posts from:
     //    - Followed users (both public and private accounts)
     //    - Non-followed users with PUBLIC accounts only
@@ -97,80 +96,78 @@ export class PostsService {
     const posts = await this.prisma.forumPost.findMany({
       where: {
         OR: [
-          { 
+          {
             // Posts from followed users (including their private posts)
-            user_id: { in: followingIds } 
+            user_id: { in: followingIds },
           },
-          { 
+          {
             // Public posts from non-followed users
-            user: { 
-              account_type: 'PUBLIC',
-              id: { notIn: followingIds } // Not already followed
-            } 
-          }
-        ]
+            user: {
+              account_type: AccountType.PUBLIC,
+              id: { notIn: followingIds }, // Not already followed
+            },
+          },
+        ],
       },
       include: {
         user: true,
         likes: true,
         comments: true,
-        shares: true // Include shares in the ranking
+        shares: true, // Include shares in the ranking
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
-  
+
     // 3. Create a map of followed users for quick lookup
-    const followingMap = following.reduce((acc, curr) => {
-      acc[curr.followed_id] = true;
-      return acc;
-    }, {} as Record<number, boolean>);
-  
-    // 4. Filter out private posts from non-followed users (extra safety)
-    const filteredPosts = posts.filter(post => 
-      post.user.account_type === 'PUBLIC' || 
-      followingMap[post.user_id]
+    const followingMap = following.reduce(
+      (acc, curr) => {
+        acc[curr.followed_id] = true;
+        return acc;
+      },
+      {} as Record<number, boolean>,
     );
-  
+
+    // 4. Filter out private posts from non-followed users (extra safety)
+    const filteredPosts = posts.filter(
+      (post) =>
+        post.user.account_type === AccountType.PUBLIC ||
+        followingMap[post.user_id],
+    );
+
     // 5. Rank the posts using our algorithm (now including shares)
-    return this.feedAlgorithm.getRankedFeed(filteredPosts, userId, followingMap);
+    return this.feedAlgorithm.getRankedFeed(filteredPosts, followingMap);
   }
-  async createComment(userId: number, postId: number, dto: CreateCommentDto): Promise<PostComment> {
-    // Check if post exists and is accessible
+
+  async createComment(
+    userId: number,
+    postId: number,
+    dto: CreateCommentDto,
+  ): Promise<PostComment> {
     const post = await this.prisma.forumPost.findUnique({
-      where: { id: postId },  // Use the postId passed as a parameter
-      include: { user: true }
+      where: { id: postId },
+      include: { user: true },
     });
-  
+
     if (!post) {
       throw new NotFoundException('Post not found');
     }
-  
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === 'PRIVATE') {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id
-        }
-      });
-  
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot comment on private post');
-      }
-    }
 
-    // Create and return the new comment
+    await this.checkPrivatePostAccess(userId, post, 'comment on');
+
     return this.prisma.postComment.create({
       data: {
         content: dto.content,
         user_id: userId,
-        post_id: postId  // Use the postId passed as a parameter
-      }
+        post_id: postId,
+      },
     });
   }
-  
-  
-  async updateComment(userId: number, commentId: number, dto: CreateCommentDto) {
+
+  async updateComment(
+    userId: number,
+    commentId: number,
+    dto: UpdateCommentDto,
+  ) {
     const comment = await this.prisma.postComment.findUnique({
       where: { id: commentId },
     });
@@ -181,7 +178,9 @@ export class PostsService {
 
     // Check if the user is the one who created the comment
     if (comment.user_id !== userId) {
-      throw new ForbiddenException('You are not authorized to update this comment');
+      throw new ForbiddenException(
+        'You are not authorized to update this comment',
+      );
     }
 
     // Update and return the comment
@@ -192,7 +191,8 @@ export class PostsService {
       },
     });
   }
-  async deleteComment(userId: number, commentId: number): Promise<void> {
+
+  async deleteComment(userId: number, commentId: number) {
     // Find the comment
     const comment = await this.prisma.postComment.findUnique({
       where: { id: commentId },
@@ -204,7 +204,9 @@ export class PostsService {
 
     // Check if the user is the one who created the comment
     if (comment.user_id !== userId) {
-      throw new ForbiddenException('You are not authorized to delete this comment');
+      throw new ForbiddenException(
+        'You are not authorized to delete this comment',
+      );
     }
 
     // Delete the comment
@@ -213,41 +215,29 @@ export class PostsService {
     });
   }
 
-
-  async likePost(userId: number, postId: number): Promise<PostLike> {
+  async likePost(userId: number, postId: number) {
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
       include: { user: true },
     });
-  
+
     if (!post) {
       throw new NotFoundException('Post not found');
     }
-  
+
     const existingLike = await this.prisma.postLike.findFirst({
       where: {
         user_id: userId,
         post_id: postId,
       },
     });
-  
+
     if (existingLike) {
       throw new BadRequestException('Post already liked');
     }
-  
-    if (post.user.account_type === 'PRIVATE') {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id,
-        },
-      });
-  
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot like private post');
-      }
-    }
-  
+
+    await this.checkPrivatePostAccess(userId, post, 'like');
+
     return this.prisma.postLike.create({
       data: {
         user_id: userId,
@@ -255,14 +245,13 @@ export class PostsService {
       },
     });
   }
-  
 
-  async unlikePost(userId: number, postId: number): Promise<void> {
+  async unlikePost(userId: number, postId: number) {
     const like = await this.prisma.postLike.findFirst({
       where: {
         user_id: userId,
-        post_id: postId
-      }
+        post_id: postId,
+      },
     });
 
     if (!like) {
@@ -270,64 +259,49 @@ export class PostsService {
     }
 
     await this.prisma.postLike.delete({
-      where: { id: like.id }
+      where: { id: like.id },
     });
   }
 
-  async sharePost(userId: number, postId: number): Promise<SharedPost> {
-    // Check if post exists
+  async sharePost(userId: number, postId: number) {
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
-      include: { user: true }
+      include: { user: true },
     });
-  
+
     if (!post) {
       throw new NotFoundException('Post not found');
     }
-  
-    // Check if already shared
+
     const existingShare = await this.prisma.sharedPost.findFirst({
       where: {
         user_id: userId,
-        post_id: postId
-      }
+        post_id: postId,
+      },
     });
-  
+
     if (existingShare) {
       throw new BadRequestException('Post already shared');
     }
-  
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === 'PRIVATE') {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id
-        }
-      });
-  
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot share private post');
-      }
-    }
-  
-    // Share the post
+
+    await this.checkPrivatePostAccess(userId, post, 'share');
+
     const sharedPost = await this.prisma.sharedPost.create({
       data: {
         user_id: userId,
-        post_id: postId
-      }
+        post_id: postId,
+      },
     });
-  
+
     return sharedPost;
   }
 
-  async unsharePost(userId: number, postId: number): Promise<void> {
+  async unsharePost(userId: number, postId: number) {
     const share = await this.prisma.sharedPost.findFirst({
       where: {
         user_id: userId,
-        post_id: postId
-      }
+        post_id: postId,
+      },
     });
 
     if (!share) {
@@ -335,31 +309,10 @@ export class PostsService {
     }
 
     await this.prisma.sharedPost.delete({
-      where: { id: share.id }
+      where: { id: share.id },
     });
   }
-  async getPostComments(postId: number): Promise<PostComment[]> {
-    return this.prisma.postComment.findMany({
-      where: { post_id: postId },
-      include: { user: true },
-      orderBy: { created_at: 'desc' }
-    });
-  }
-
-  async getPostLikes(postId: number): Promise<PostLike[]> {
-    return this.prisma.postLike.findMany({
-      where: { post_id: postId },
-      include: { user: true }
-    });
-  }
-
-  async getPostShares(postId: number): Promise<SharedPost[]> {
-    return this.prisma.sharedPost.findMany({
-      where: { post_id: postId },
-      include: { user: true }
-    });
-  }
-
+  
   async getUserPosts(userId: number) : Promise<ForumPost[]> {
     return this.prisma.forumPost.findMany({
       where: { user_id: userId },
@@ -367,13 +320,7 @@ export class PostsService {
       include: { user: true, likes: true, comments: true, shares: true }
     });
   }
-    async getSharedPosts(userId: number): Promise<SharedPost[]> {
-    return this.prisma.sharedPost.findMany({
-      where: { user_id: userId },
-      include: { user: true }
-    });
-  }
-
+  
   async getUserSharedPosts(userId: number): Promise<any[]> {
     const sharedPosts = await this.prisma.sharedPost.findMany({
       where: { user_id: userId },
@@ -389,5 +336,72 @@ export class PostsService {
     return sharedPosts.map(shared => ({
       ...shared.post,
     }));
+  }
+}
+  
+  
+
+  async getPostInteractions(
+    userId: number,
+    postId: number,
+    model: 'postComment' | 'postLike' | 'sharedPost',
+    action: string,
+  ) {
+    await this.findOne(userId, postId, action);
+
+    const baseQuery = {
+      where: { post_id: postId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            account_type: true,
+            profile_image: true,
+          },
+        },
+      },
+    };
+
+    switch (model) {
+      case 'postComment':
+        return this.prisma.postComment.findMany({
+          ...baseQuery,
+          orderBy: { created_at: 'desc' },
+        });
+      case 'postLike':
+        return this.prisma.postLike.findMany(baseQuery);
+      case 'sharedPost':
+        return this.prisma.sharedPost.findMany(baseQuery);
+      default:
+        throw new BadRequestException('Invalid model type');
+    }
+  }
+
+  private async checkPrivatePostAccess(
+    userId: number,
+    post: any,
+    action: string,
+  ) {
+    if (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      post.user.account_type === AccountType.PRIVATE &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      post.user_id !== userId
+    ) {
+      const isFollowing = await this.prisma.follow.findFirst({
+        where: {
+          follower_id: userId,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          followed_id: post.user.id,
+        },
+      });
+
+      if (!isFollowing) {
+        throw new ForbiddenException(
+          `Cannot ${action} private post. You must follow the user first.`,
+        );
+      }
+    }
   }
 }
