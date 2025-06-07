@@ -6,6 +6,7 @@ import {
   Patch,
   Delete,
   ParseIntPipe,
+  Req,
 } from '@nestjs/common';
 import { PlantService } from './plant.service';
 import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
@@ -13,17 +14,28 @@ import { CreatePlantDto } from './dto/create-plant.dto';
 import { UpdatePlantDto } from './dto/update-plant.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
+import { RequestWithUser } from 'src/common/types/auth.types';
 
 @Auth()
 @ApiController('plants')
 export class PlantController {
   constructor(private readonly plantService: PlantService) {}
 
-  @Post()
+  @Post('create')
   @ApiOperation({ summary: 'Create a new plant' })
   @ApiResponse({ status: 201, description: 'Plant created successfully' })
-  create(@Body() createPlantDto: CreatePlantDto) {
-    return this.plantService.createPlant(createPlantDto);
+  create(@Body() createPlantDto: CreatePlantDto, @Req() req: RequestWithUser) {
+    return this.plantService.createPlant(req.user.id, createPlantDto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all plants' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all plants',
+  })
+  findAll(@Req() req: RequestWithUser) {
+    return this.plantService.getAllPlants(req.user.id);
   }
 
   @Get(':id')
@@ -44,7 +56,7 @@ export class PlantController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.plantService.getPlantById(id);
   }
-  @Patch(':id')
+  @Patch(':id/update')
   @ApiOperation({ summary: 'Update a plant by ID' })
   @ApiResponse({
     status: 200,
@@ -66,7 +78,7 @@ export class PlantController {
     return this.plantService.update(id, updatePlantDto);
   }
 
-  @Delete(':id')
+  @Delete(':id/delete')
   @ApiOperation({ summary: 'Delete a plant by ID' })
   @ApiResponse({
     status: 200,
