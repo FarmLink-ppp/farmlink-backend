@@ -16,6 +16,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+
 @Auth()
 @ApiController('posts')
 export class PostsController {
@@ -34,6 +35,16 @@ export class PostsController {
   @Get('feed')
   getFeed(@Req() req: RequestWithUser) {
     return this.postsService.getFeed(req.user.id);
+  }
+
+  @Get('me')
+  getUserPosts(@Req() req: RequestWithUser) {
+    return this.postsService.getUserPosts(req.user.id);
+  }
+
+  @Get('me/shared-posts')
+  getUserSharedPosts(@Req() req: RequestWithUser) {
+    return this.postsService.getUserSharedPosts(req.user.id);
   }
 
   @Get(':id')
