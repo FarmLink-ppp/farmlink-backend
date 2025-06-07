@@ -36,13 +36,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
       : HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
-  private getErrorMessage(exception: unknown): string | object {
+  private getErrorMessage(exception: unknown): string {
     if (exception instanceof HttpException) {
-      return exception.getResponse();
+      const response = exception.getResponse();
+
+      if (typeof response === 'object' && response !== null) {
+        if ('message' in response && typeof response.message === 'string') {
+          return response.message;
+        }
+        if ('message' in response && Array.isArray(response.message)) {
+          return response.message.join(', ');
+        }
+        return JSON.stringify(response);
+      }
+
+      if (typeof response === 'string') {
+        return response;
+      }
     }
-    return exception instanceof Error
-      ? exception.message
-      : 'Internal server error';
+
+    if (exception instanceof Error) {
+      return exception.message;
+    }
+
+    return 'Internal server error';
   }
 
   private logException(request: Request, status: number, exception: unknown) {
