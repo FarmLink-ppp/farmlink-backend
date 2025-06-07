@@ -9,6 +9,7 @@ import {
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { log } from 'util';
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
@@ -38,7 +39,24 @@ export class PostsController {
   getFeed(@Req() req: RequestWithUser) {
     return this.postsService.getFeed(req.user.id);
   }
-    @ApiCookieAuth('access-token')
+
+  @ApiCookieAuth('access-token')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getUserPosts(@Req() req: RequestWithUser) {
+    return this.postsService.getUserPosts(req.user.id);
+  }
+
+  @ApiCookieAuth('access-token')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('me/shared-posts')
+  getUserSharedPosts(@Req() req: RequestWithUser) {
+    return this.postsService.getUserSharedPosts(req.user.id);
+  }
+
+  @ApiCookieAuth('access-token')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post('comment/:postId')  // postId is now a route parameter
@@ -79,33 +97,12 @@ export class PostsController {
     // Call the service method with the userId and postId
     return await this.postsService.sharePost(req.user.id, postId);
   }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Post('save/:postId')  // postId is now part of the route parameter
-  async savePost(
-    @Param('postId') postId: number,  // Capture postId from the route
-    @Req() req: RequestWithUser       // Get user info from the request object
-  ) {
-    // Call the service method with the userId and postId
-    return await this.postsService.savePost(req.user.id, postId);
-  }
-
   @ApiCookieAuth('access-token')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Delete('share/:postId')
   unsharePost(@Param('postId') postId: string, @Req() req: RequestWithUser) {
     return this.postsService.unsharePost(req.user.id, Number(postId));
-  }
-
-  @ApiCookieAuth('access-token')
-  @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
-  @Delete('save/:postId')
-  unsavepost(@Param('postId') postId: string, @Req() req: RequestWithUser) {
-    return this.postsService.unsavePost(req.user.id, Number(postId));
   }
 
   @Patch('/comment/:commentId')
@@ -140,16 +137,25 @@ export class PostsController {
 
 
   @Get('/comments/:postId')
+  @ApiCookieAuth('access-token')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   getPostComments(@Param('postId') postId: string) {
     return this.postsService.getPostComments(Number(postId));
   }
 
   @Get('/likes/:postId')
+  @ApiCookieAuth('access-token')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   getPostLikes(@Param('postId') postId: string) {
     return this.postsService.getPostLikes(Number(postId));
   }
 
   @Get('/shares/:postId')
+  @ApiCookieAuth('access-token')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   getPostShares(@Param('postId') postId: string) {
     return this.postsService.getPostShares(Number(postId));
   }

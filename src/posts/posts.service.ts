@@ -2,7 +2,7 @@ import { Injectable, NotFoundException , BadRequestException , ForbiddenExceptio
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from './../prisma/prisma.service';
-import { ForumPost ,PostComment, PostLike, SavedPost, SharedPost } from '@prisma/client';
+import { ForumPost ,PostComment, PostLike, SharedPost } from '@prisma/client';
 import { FeedAlgorithmService } from './feed-algorithm.service';
 import { CreateCommentDto} from './dto/create-comment.dto';
 @Injectable()
@@ -34,8 +34,11 @@ export class PostsService {
     });
   }
 
-  async findOne(userId: number,postId: number) {
-    const post = await this.prisma.forumPost.findFirst({
+  async findOne(userId: number, postId: number) {
+    if (!postId || typeof postId !== 'number' || isNaN(postId)) {
+      throw new BadRequestException('Invalid postId');
+    }
+    const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
       include: { user: true },
     });
@@ -48,10 +51,6 @@ export class PostsService {
           followed_id: post.user.id,
         },
       });
-      console.log("hello");
-      
-      console.log(isFollowing);
-      
       // If the user is not following the profile, deny access
       if (!isFollowing) {
         throw new ForbiddenException('This post is private. You must follow the user to view it.');
@@ -322,54 +321,6 @@ export class PostsService {
   
     return sharedPost;
   }
-  
-  async savePost(userId: number, postId: number): Promise<SavedPost> {
-    // Check if post exists
-    const post = await this.prisma.forumPost.findUnique({
-      where: { id: postId },
-      include: { user: true }
-    });
-  
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-  
-    // Check if already shared
-    const existingSave = await this.prisma.savedPost.findFirst({
-      where: {
-        user_id: userId,
-        post_id: postId
-      }
-    });
-  
-    if (existingSave) {
-      throw new BadRequestException('Post already saved');
-    }
-  
-    // Check if post is private and user doesn't follow the author
-    if (post.user.account_type === 'PRIVATE') {
-      const isFollowing = await this.prisma.follow.findFirst({
-        where: {
-          follower_id: userId,
-          followed_id: post.user.id
-        }
-      });
-  
-      if (!isFollowing) {
-        throw new ForbiddenException('Cannot save private post');
-      }
-    }
-  
-    // Share the post
-    const savedPost = await this.prisma.savedPost.create({
-      data: {
-        user_id: userId,
-        post_id: postId
-      }
-    });
-  
-    return savedPost;
-  }
 
   async unsharePost(userId: number, postId: number): Promise<void> {
     const share = await this.prisma.sharedPost.findFirst({
@@ -387,23 +338,6 @@ export class PostsService {
       where: { id: share.id }
     });
   }
-  async unsavePost(userId: number, postId: number): Promise<void> {
-    const share = await this.prisma.sharedPost.findFirst({
-      where: {
-        user_id: userId,
-        post_id: postId
-      }
-    });
-
-    if (!share) {
-      throw new NotFoundException('Share not found');
-    }
-
-    await this.prisma.savedPost.delete({
-      where: { id: share.id }
-    });
-  }
-
   async getPostComments(postId: number): Promise<PostComment[]> {
     return this.prisma.postComment.findMany({
       where: { post_id: postId },
@@ -424,5 +358,28 @@ export class PostsService {
       where: { post_id: postId },
       include: { user: true }
     });
+  }
+
+  async getUserPosts(userId: number) : Promise<ForumPost[]> {
+    return this.prisma.forumPost.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      include: { user: true, likes: true, comments: true, shares: true }
+    });
+  }
+    async getSharedPosts(userId: number): Promise<SharedPost[]> {
+    return this.prisma.sharedPost.findMany({
+      where: { user_id: userId },
+      include: { user: true }
+    });
+  }
+
+  async getUserSharedPosts(userId: number): Promise<ForumPost[]> {
+    const sharedPosts = await this.prisma.sharedPost.findMany({
+      where: { user_id: userId },
+      include: { post: true }
+    });
+
+    return sharedPosts.map(shared => shared.post);
   }
 }
