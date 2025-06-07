@@ -374,12 +374,20 @@ export class PostsService {
     });
   }
 
-  async getUserSharedPosts(userId: number): Promise<ForumPost[]> {
+  async getUserSharedPosts(userId: number): Promise<any[]> {
     const sharedPosts = await this.prisma.sharedPost.findMany({
       where: { user_id: userId },
-      include: { post: true }
+      include: {
+        post: {
+          include: { user: true, likes: true, comments: true, shares: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
     });
 
-    return sharedPosts.map(shared => shared.post);
+    // Add original_user attribute to each shared post
+    return sharedPosts.map(shared => ({
+      ...shared.post,
+    }));
   }
 }
