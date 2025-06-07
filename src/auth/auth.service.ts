@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -194,10 +193,7 @@ export class AuthService {
           'If this email is registered and not verified, a verification email has been sent. Please check your inbox or spam folder.',
       };
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof BadRequestException) {
         throw error;
       }
       throw new InternalServerErrorException(
