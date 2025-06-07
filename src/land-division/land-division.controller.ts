@@ -21,7 +21,7 @@ import { ApiController } from 'src/common/decorators/custom-controller.decorator
 export class LandDivisionController {
   constructor(private readonly landDivisionService: LandDivisionService) {}
 
-  @Post()
+  @Post('create')
   @ApiOperation({ summary: 'Create a new land division' })
   @ApiBody({ type: CreateLandDivisionDto })
   @ApiResponse({
@@ -35,21 +35,16 @@ export class LandDivisionController {
     return this.landDivisionService.createLandDivision(createDto, req.user.id);
   }
 
-  @Get('farm/:farmId')
-  @ApiOperation({ summary: 'Get all land divisions for a specific farm' })
+  @Get('farm')
+  @ApiOperation({
+    summary: "Get all land divisions for authenticated user's farm",
+  })
   @ApiResponse({
     status: 200,
     description: 'List of land divisions for the specified farm',
   })
-  @ApiParam({ name: 'farmId', type: Number, description: 'ID of the farm' })
-  async getAllByFarmId(
-    @Param('farmId', ParseIntPipe) farmId: number,
-    @Req() req: RequestWithUser,
-  ) {
-    return this.landDivisionService.getLandDivisionsByFarmId(
-      farmId,
-      req.user.id,
-    );
+  async getAllByFarmId(@Req() req: RequestWithUser) {
+    return this.landDivisionService.getLandDivisionsByFarmId(req.user.id);
   }
 
   @Get(':id')
@@ -68,7 +63,7 @@ export class LandDivisionController {
     return this.landDivisionService.getLandDivisionById(id, req.user.id);
   }
 
-  @Patch(':id')
+  @Patch(':id/update')
   @ApiOperation({ summary: 'Update a land division' })
   @ApiResponse({
     status: 200,
@@ -92,7 +87,7 @@ export class LandDivisionController {
     );
   }
 
-  @Delete(':id')
+  @Delete(':id/delete')
   @ApiOperation({ summary: 'Delete a land division' })
   @ApiResponse({
     status: 200,
@@ -111,7 +106,7 @@ export class LandDivisionController {
     return this.landDivisionService.deleteLandDivision(id, req.user.id);
   }
 
-  @Get(':id/plant')
+  @Get(':id/plants')
   @ApiOperation({ summary: 'Get the plant planted in this land division' })
   @ApiResponse({ status: 404, description: 'Land division not found' })
   @ApiParam({

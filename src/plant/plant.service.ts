@@ -6,23 +6,38 @@ import {
 import { PrismaService } from './../prisma/prisma.service';
 import { CreatePlantDto } from './dto/create-plant.dto';
 import { UpdatePlantDto } from './dto/update-plant.dto';
+import { FarmService } from 'src/farm/farm.service';
 
 @Injectable()
 export class PlantService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly farmService: FarmService,
+  ) {}
 
-  async createPlant(createPlantDto: CreatePlantDto) {
+  async createPlant(userId: number, createPlantDto: CreatePlantDto) {
+    const farm = await this.farmService.getFarmByUserId(userId);
+
     try {
       return await this.prisma.plant.create({
         data: {
           name: createPlantDto.name,
           description: createPlantDto.description,
           image_url: createPlantDto.imageUrl,
+          farm_id: farm.id,
         },
       });
     } catch (error) {
       throw new InternalServerErrorException(error, 'Error creating plant');
     }
+  }
+
+  async getAllPlants(userId: number) {
+    const farm = await this.farmService.getFarmByUserId(userId);
+    return await this.prisma.plant.findMany({
+      where: { farm_id: farm.id },
+      orderBy: { created_at: 'desc' },
+    });
   }
 
   async getPlantById(id: number) {

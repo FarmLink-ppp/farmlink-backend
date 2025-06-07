@@ -170,6 +170,7 @@ model Farm {
   user_id   Int            @unique
   user      User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   divisions LandDivision[]
+  Plant     Plant[]
 
   @@map("farms")
 }
@@ -210,6 +211,8 @@ model Plant {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
+  farm_id        Int
+  farm           Farm           @relation(fields: [farm_id], references: [id], onDelete: Cascade)
   land_divisions LandDivision[]
 
   @@map("plants")

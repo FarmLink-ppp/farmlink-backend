@@ -51,35 +51,12 @@ export class FarmService {
     }
   }
 
-  async getFarmById(id: number, userId: number) {
+  async update(updateFarmDto: UpdateFarmDto, userId: number) {
     try {
-      const farm = await this.prisma.farm.findUnique({
-        where: { id, user_id: userId },
-        include: {
-          divisions: {
-            include: {
-              plant: true,
-            },
-          },
-        },
-      });
-      if (!farm) throw new NotFoundException('Farm not found');
-      return farm;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(
-        error,
-        'Error fetching farm details',
-      );
-    }
-  }
-
-  async update(id: number, updateFarmDto: UpdateFarmDto, userId: number) {
-    try {
-      const farm = await this.getFarmById(id, userId);
+      const farm = await this.getFarmByUserId(userId);
 
       return await this.prisma.farm.update({
-        where: { id },
+        where: { user_id: userId },
         data: {
           name: updateFarmDto.name ?? farm.name,
           total_area: updateFarmDto.totalArea ?? farm.total_area,
@@ -93,11 +70,11 @@ export class FarmService {
     }
   }
 
-  async remove(id: number, userId: number) {
+  async remove(userId: number) {
     try {
-      await this.getFarmById(id, userId);
+      await this.getFarmByUserId(userId);
       return await this.prisma.farm.delete({
-        where: { id },
+        where: { user_id: userId },
       });
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
