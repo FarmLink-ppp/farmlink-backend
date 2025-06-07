@@ -96,7 +96,10 @@ export class LandDivisionService {
           updateLandDivisionDto.cultivationStatus ??
           division.cultivation_status,
         geolocation: updateLandDivisionDto.geolocation ?? division.geolocation,
-        plant_id: updateLandDivisionDto.plantId ?? division.plant_id,
+        plant_id:
+          updateLandDivisionDto.plantId !== undefined
+            ? updateLandDivisionDto.plantId
+            : division.plant_id,
       },
       include: {
         plant: true,
