@@ -21,17 +21,18 @@ export class PostsService {
   ) {}
 
   async create(userId: number, dto: CreatePostDto) {
-    if (!dto.content && (!dto.image_urls || dto.image_urls.length === 0)) {
+    // Ensure image_urls is always an array, never null or undefined
+    const imageUrls = Array.isArray(dto.image_urls) ? dto.image_urls : [];
+    if (!dto.content && imageUrls.length === 0) {
       throw new BadRequestException(
         'Post must have either content or at least one image.',
       );
     }
-
     return this.prisma.forumPost.create({
       data: {
         user_id: userId,
         content: dto.content,
-        image_urls: dto.image_urls || [],
+        image_urls: imageUrls,
         category: dto.category,
       },
     });

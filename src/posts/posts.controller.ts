@@ -7,6 +7,9 @@ import {
   Delete,
   Req,
   ParseIntPipe,
+  UseInterceptors,
+  BadRequestException,
+  UploadedFiles,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -16,6 +19,10 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import path from 'path';
+import { ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
 
 @Auth()
 @ApiController('posts')
@@ -23,8 +30,63 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto, @Req() req: RequestWithUser) {
-    return this.postsService.create(req.user.id, createPostDto);
+  @UseInterceptors(
+    FilesInterceptor('image_urls', 10, {
+      storage: diskStorage({
+        destination: path.join(process.cwd(), 'uploads', 'posts'),
+        filename: (req, file, cb) => {
+          const timestamp = Date.now();
+          const fileExtension = file.originalname.split('.').pop();
+          const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+          cb(null, fileName);
+        },
+      }),
+      fileFilter(req, file, cb) {
+        // Accept only image files (jpg, jpeg, png, webp, gif)
+        if (!file.mimetype.match(/^image\/(jpg|jpeg|png|webp|gif)$/i)) {
+          return cb(
+            new BadRequestException('Only image files are allowed (jpg, jpeg, png, webp, gif)'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB per file
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', example: 'This is a post' },
+        category: { type: 'string', example: 'DISCUSSIONS' },
+        image_urls: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Images to upload (jpg, jpeg, png, webp, gif)',
+        },
+      },
+      required: ['category'], // Only category is required
+    },
+  })
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: RequestWithUser,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Make image_urls totally optional: if files is undefined or empty, send []
+    const imageUrls = Array.isArray(files) && files.length > 0
+      ? files.map(f => `${baseUrl}/uploads/posts/${f.filename}`)
+      : [];
+    // Always send image_urls as an array, even if empty
+    return this.postsService.create(req.user.id, {
+      ...createPostDto,
+      image_urls: imageUrls,
+    });
   }
 
   @Get()
