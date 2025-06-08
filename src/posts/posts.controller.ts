@@ -155,4 +155,11 @@ export class PostsController {
       'view shares on',
     );
   }
+
+  @Get('count')
+  getTotalPostsCount() {
+    return this.postsService.getTotalPostsCount();
+  }
+
+
 }

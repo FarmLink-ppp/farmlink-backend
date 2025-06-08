@@ -40,6 +40,15 @@ export class PlantService {
     });
   }
 
+  async getPlantCount(userId: number): Promise<number> {
+  const farm = await this.farmService.getFarmByUserId(userId);
+  const count = await this.prisma.plant.count({
+    where: { farm_id: farm.id },
+  });
+  return count;
+}
+
+
   async getPlantById(id: number) {
     const plant = await this.prisma.plant.findUnique({ where: { id } });
     if (!plant) {
