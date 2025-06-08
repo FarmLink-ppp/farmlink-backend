@@ -26,7 +26,10 @@ import { UpdatePasswordDto } from './dto/update-password.dto';
 @Auth()
 @ApiController('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
   @Get('profile')
   @ApiOperation({ summary: 'Get user profile information' })
@@ -103,7 +106,8 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     if (file) {
-      updateUserDto.profileImage = file.path;
+      const imageUrl = this.fileUploadService.generateFilePath(file, 'users');
+      updateUserDto.profileImage = imageUrl;
     }
     return this.usersService.updateProfile(req.user.id, updateUserDto);
   }
