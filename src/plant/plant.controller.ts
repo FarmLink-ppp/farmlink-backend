@@ -38,6 +38,17 @@ export class PlantController {
     return this.plantService.getAllPlants(req.user.id);
   }
 
+  @Get('count')
+  @ApiOperation({ summary: "Get total number of plants for the user's farm" })
+  @ApiResponse({ status: 200, description: 'Total plant count returned' })
+  @ApiResponse({
+    status: 404,
+    description: 'Farm not found for the user',
+  })
+  getPlantCount(@Req() req: RequestWithUser) {
+    return this.plantService.getPlantCount(req.user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific plant by ID' })
   @ApiResponse({
