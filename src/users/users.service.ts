@@ -1,13 +1,15 @@
 import { PrismaService } from './../prisma/prisma.service';
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateAccountType, UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
 import { HashService } from 'src/common/services/hash.service';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -60,7 +62,7 @@ export class UsersService {
     });
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async updateProfile(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findBy({ id });
 
     // check if email or username already exists
@@ -70,12 +72,6 @@ export class UsersService {
         updateUserDto.username,
         id,
       );
-    // hash password if it is being updated
-    if (updateUserDto.password) {
-      updateUserDto.password = await this.hashService.hashPassword(
-        updateUserDto.password,
-      );
-    }
 
     return await this.prisma.user.update({
       where: { id },
@@ -86,10 +82,45 @@ export class UsersService {
         profile_image: updateUserDto.profileImage ?? user!.profile_image,
         bio: updateUserDto.bio ?? user!.bio,
         location: updateUserDto.location ?? user!.location,
-        password_hash: updateUserDto.password ?? user!.password_hash,
-        account_type: updateUserDto.accountType ?? user!.account_type,
       },
       select: this.userSafeFields,
+    });
+  }
+
+  async updatePassword(userId: number, updatePasswordDto: UpdatePasswordDto) {
+    const user = await this.findBy({ id: userId });
+
+    const { currentPassword, newPassword } = updatePasswordDto;
+
+    const isCurrentPasswordValid = await this.hashService.comparePassword(
+      currentPassword,
+      user!.password_hash,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new ForbiddenException('Current password is incorrect');
+    }
+
+    const password_hash = await this.hashService.hashPassword(newPassword);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password_hash },
+      select: this.userSafeFields,
+    });
+
+    return { message: 'Password updated successfully' };
+  }
+
+  async updateAccountType(
+    userId: number,
+    updateAccountType: UpdateAccountType,
+  ) {
+    const user = await this.findBy({ id: userId });
+
+    return await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        account_type: updateAccountType.accountType ?? user!.account_type,
+      },
     });
   }
 
@@ -144,6 +175,32 @@ export class UsersService {
         reset_pass_token: token,
         reset_pass_expires: resetTokenExpiration,
       },
+    });
+  }
+
+  async resetPasswordWithToken(token: string, newPassword: string) {
+    const user = await this.findByResetToken(token);
+    if (!user) {
+      throw new ForbiddenException('Invalid or expired reset token');
+    }
+
+    if (
+      user.reset_pass_expires &&
+      new Date() > new Date(user.reset_pass_expires)
+    )
+      throw new ForbiddenException('Invalid or expired reset token');
+
+    // hash new password
+    const password_hash = await this.hashService.hashPassword(newPassword);
+
+    return await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password_hash,
+        reset_pass_token: null,
+        reset_pass_expires: null,
+      },
+      select: this.userSafeFields,
     });
   }
 
