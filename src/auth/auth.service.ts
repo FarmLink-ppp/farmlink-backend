@@ -243,19 +243,7 @@ export class AuthService {
     try {
       const { token, password } = resetPasswordDto;
 
-      const user = await this.usersService.findByResetToken(token);
-      if (!user) {
-        throw new ForbiddenException('Invalid or expired reset token');
-      }
-      if (
-        user.reset_pass_expires &&
-        new Date() > new Date(user.reset_pass_expires)
-      )
-        throw new ForbiddenException('Invalid or expired reset token');
-      // update password
-      await this.usersService.update(user.id, { password });
-      // set reset token to null
-      await this.usersService.updateResetToken(user.id, null, null);
+      await this.usersService.resetPasswordWithToken(token, password);
 
       return { message: 'Password reset successfully' };
     } catch (error) {
