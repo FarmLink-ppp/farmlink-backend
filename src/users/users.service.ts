@@ -88,7 +88,7 @@ export class UsersService {
   }
 
   async updatePassword(userId: number, updatePasswordDto: UpdatePasswordDto) {
-    const user = await this.findBy({ id: userId });
+    const user = await this.findBy({ id: userId }, { password_hash: true });
 
     const { currentPassword, newPassword } = updatePasswordDto;
 
@@ -114,13 +114,14 @@ export class UsersService {
     userId: number,
     updateAccountType: UpdateAccountType,
   ) {
-    const user = await this.findBy({ id: userId });
+    const user = await this.findBy({ id: userId }, { account_type: true });
 
     return await this.prisma.user.update({
       where: { id: userId },
       data: {
         account_type: updateAccountType.accountType ?? user!.account_type,
       },
+      select: { ...this.userSafeFields, account_type: true },
     });
   }
 
