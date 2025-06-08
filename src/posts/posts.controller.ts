@@ -36,6 +36,11 @@ export class PostsController {
     return this.postsService.getFeed(req.user.id);
   }
 
+  @Get('count')
+  getTotalPostsCount() {
+    return this.postsService.getTotalPostsCount();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {
     return this.postsService.findOne(req.user.id, id, 'view');
@@ -155,11 +160,4 @@ export class PostsController {
       'view shares on',
     );
   }
-
-  @Get('count')
-  getTotalPostsCount() {
-    return this.postsService.getTotalPostsCount();
-  }
-
-
 }

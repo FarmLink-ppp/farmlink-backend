@@ -87,12 +87,15 @@ export class TasksController {
     return this.tasksService.getTasksByStatus(req.user.id, status);
   }
 
-  @Get('upcoming')  // New endpoint for upcoming tasks
+  @Get('upcoming')
   @ApiOperation({ summary: 'Get upcoming tasks (PENDING or IN_PROGRESS)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Upcoming tasks retrieved successfully',
+  })
   getUpcomingTasks(@Req() req: RequestWithUser) {
     return this.tasksService.getUpcomingTasks(req.user.id);
   }
-
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update task' })
