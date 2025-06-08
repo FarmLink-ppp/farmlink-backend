@@ -5,6 +5,7 @@ import {
   Patch,
   UseInterceptors,
   Delete,
+  Get,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateAccountType, UpdateUserDto } from './dto/update-user.dto';
@@ -26,6 +27,20 @@ import { UpdatePasswordDto } from './dto/update-password.dto';
 @ApiController('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Get user profile information' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  getProfile(@Req() req: RequestWithUser) {
+    return this.usersService.findBy({ id: req.user.id });
+  }
 
   @UseInterceptors(
     FileInterceptor(
