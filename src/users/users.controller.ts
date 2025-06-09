@@ -1,21 +1,27 @@
 import {
   Body,
-  Get,
   UploadedFile,
-  Param,
   Req,
   Patch,
-  Post,
+  UseInterceptors,
+  Delete,
+  Get,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateAccountType, UpdateUserDto } from './dto/update-user.dto';
 import { RequestWithUser } from 'src/common/types/auth.types';
 import { Express } from 'express';
-import { ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiController } from 'src/common/decorators/custom-controller.decorator';
-import { FileUpload } from 'src/common/decorators/file-upload.decorator';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Auth()
 @ApiController('users')
@@ -25,43 +31,133 @@ export class UsersController {
     private readonly fileUploadService: FileUploadService,
   ) {}
 
-  @Get(':id')
-  async findOne(@Param('id') id: number) {
-    return await this.usersService.findBy({ id });
+  @Get('profile')
+  @ApiOperation({ summary: 'Get user profile information' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  getProfile(@Req() req: RequestWithUser) {
+    return this.usersService.findBy({ id: req.user.id });
   }
 
+  @UseInterceptors(
+    FileInterceptor(
+      'profileImage',
+      FileUploadService.createMulterOptions(
+        './uploads/users',
+        'profileImage',
+        1024 * 1024 * 1,
+        /\/(jpg|jpeg|png|webp)$/i,
+      ),
+    ),
+  )
+  @ApiOperation({ summary: 'Update profile information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        profileImage: {
+          type: 'string',
+          format: 'binary',
+          nullable: true,
+        },
+        username: {
+          type: 'string',
+          nullable: true,
+        },
+        email: {
+          type: 'string',
+          format: 'email',
+          nullable: true,
+        },
+        fullName: {
+          type: 'string',
+          nullable: true,
+        },
+        bio: {
+          type: 'string',
+          nullable: true,
+        },
+        location: {
+          type: 'string',
+          nullable: true,
+        },
+      },
+    },
+  })
   @Patch('/profile')
   async updateProfile(
+    @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return await this.usersService.update(req.user.id, updateUserDto);
+    if (file) {
+      const imageUrl = this.fileUploadService.generateFilePath(file, 'users');
+      updateUserDto.profileImage = imageUrl;
+    }
+    return this.usersService.updateProfile(req.user.id, updateUserDto);
   }
 
-  @Post('/profile/upload-image')
+  @Patch('password')
+  @ApiOperation({ summary: 'Update user password' })
   @ApiResponse({
     status: 200,
-    description: 'Profile image updated successfully',
+    description: 'Password updated successfully',
   })
-  @FileUpload(
-    'profileImage',
-    './uploads/users',
-    1024 * 1024 * 1,
-    /\/(jpg|jpeg|png|webp)$/i,
-    'Update user profile image',
-  )
-  async uploadProfileImage(
-    @UploadedFile() file: Express.Multer.File,
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiBody({ type: UpdatePasswordDto })
+  updatePassword(
     @Req() req: RequestWithUser,
+    @Body() updatePasswordDto: UpdatePasswordDto,
   ) {
-    const imageUrl = this.fileUploadService.generateFilePath(file, 'users');
-    await this.usersService.update(req.user.id, {
-      profileImage: imageUrl,
-    });
+    return this.usersService.updatePassword(req.user.id, updatePasswordDto);
+  }
 
-    return {
-      message: 'Profile image updated successfully',
-      imageUrl,
-    };
+  @Patch('account')
+  @ApiOperation({ summary: 'Update user account type' })
+  @ApiResponse({
+    status: 200,
+    description: 'Account type updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  updateAccountType(
+    @Req() req: RequestWithUser,
+    @Body() updateAccountType: UpdateAccountType,
+  ) {
+    return this.usersService.updateAccountType(req.user.id, updateAccountType);
+  }
+
+  @Delete('account')
+  @ApiOperation({ summary: 'Delete user account' })
+  @ApiResponse({
+    status: 200,
+    description: 'Account deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  deleteAccount(@Req() req: RequestWithUser) {
+    return this.usersService.remove(req.user.id);
   }
 }

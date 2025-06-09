@@ -138,6 +138,35 @@ export class TasksService {
     }
   }
 
+  async getUpcomingTasks(userId: number) {
+    try {
+      const where = {
+        user_id: userId,
+        status: {
+          in: [TaskStatus.PENDING, TaskStatus.IN_PROGRESS],
+        },
+      };
+
+      const [tasks, totalCount] = await Promise.all([
+        this.prisma.task.findMany({
+          where,
+          orderBy: { due_date: 'asc' },
+          take: 4,
+        }),
+        this.prisma.task.count({ where }),
+      ]);
+      return {
+        tasks,
+        totalCount,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Failed to retrieve upcoming tasks',
+      );
+    }
+  }
+
   async updateTask(taskId: number, data: UpdateTaskDto, userId: number) {
     const task = await this.getTaskById(taskId);
     if (!task) {

@@ -108,6 +108,11 @@ export class PostsController {
   getUserSharedPosts(@Req() req: RequestWithUser) {
     return this.postsService.getUserSharedPosts(req.user.id);
   }
+    
+  @Get('count')
+  getTotalPostsCount() {
+    return this.postsService.getTotalPostsCount();
+  }
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: RequestWithUser) {

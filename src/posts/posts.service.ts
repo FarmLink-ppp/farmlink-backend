@@ -471,4 +471,8 @@ export class PostsService {
       }
     }
   }
+
+  async getTotalPostsCount() {
+    return this.prisma.forumPost.count();
+  }
 }
