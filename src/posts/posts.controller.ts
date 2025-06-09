@@ -22,7 +22,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import path from 'path';
-import { ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 
 @Auth()
 @ApiController('posts')
@@ -42,17 +42,18 @@ export class PostsController {
         },
       }),
       fileFilter(req, file, cb) {
-        // Accept only image files (jpg, jpeg, png, webp, gif)
         if (!file.mimetype.match(/^image\/(jpg|jpeg|png|webp|gif)$/i)) {
           return cb(
-            new BadRequestException('Only image files are allowed (jpg, jpeg, png, webp, gif)'),
+            new BadRequestException(
+              'Only image files are allowed (jpg, jpeg, png, webp, gif)',
+            ),
             false,
           );
         }
         cb(null, true);
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB per file
+        fileSize: 1 * 1024 * 1024,
       },
     }),
   )
@@ -69,7 +70,7 @@ export class PostsController {
           description: 'Images to upload (jpg, jpeg, png, webp, gif)',
         },
       },
-      required: ['category'], // Only category is required
+      required: ['category'],
     },
   })
   create(
@@ -78,11 +79,10 @@ export class PostsController {
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    // Make image_urls totally optional: if files is undefined or empty, send []
-    const imageUrls = Array.isArray(files) && files.length > 0
-      ? files.map(f => `${baseUrl}/uploads/posts/${f.filename}`)
-      : [];
-    // Always send image_urls as an array, even if empty
+    const imageUrls =
+      Array.isArray(files) && files.length > 0
+        ? files.map((f) => `${baseUrl}/uploads/posts/${f.filename}`)
+        : [];
     return this.postsService.create(req.user.id, {
       ...createPostDto,
       image_urls: imageUrls,

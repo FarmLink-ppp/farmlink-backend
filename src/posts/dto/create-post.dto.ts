@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PostCategory } from '@prisma/client';
-import { IsOptional, IsString, IsArray, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({
