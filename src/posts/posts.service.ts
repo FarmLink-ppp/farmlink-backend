@@ -11,6 +11,8 @@ import { AccountType, PostComment } from '@prisma/client';
 import { FeedAlgorithmService } from './feed-algorithm.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { PostWithUser } from 'src/common/types/post.types';
+
 @Injectable()
 export class PostsService {
   constructor(
@@ -19,17 +21,18 @@ export class PostsService {
   ) {}
 
   async create(userId: number, dto: CreatePostDto) {
-    if (!dto.content && (!dto.image_urls || dto.image_urls.length === 0)) {
+    // Ensure image_urls is always an array, never null or undefined
+    const imageUrls = Array.isArray(dto.image_urls) ? dto.image_urls : [];
+    if (!dto.content && imageUrls.length === 0) {
       throw new BadRequestException(
         'Post must have either content or at least one image.',
       );
     }
-
     return this.prisma.forumPost.create({
       data: {
         user_id: userId,
         content: dto.content,
-        image_urls: dto.image_urls || [],
+        image_urls: imageUrls,
         category: dto.category,
       },
     });
@@ -38,14 +41,34 @@ export class PostsService {
   async findAll() {
     return this.prisma.forumPost.findMany({
       orderBy: { created_at: 'desc' },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            account_type: true,
+            username: true,
+            full_name: true,
+            profile_image: true,
+          },
+        },
+      },
     });
   }
 
   async findOne(userId: number, postId: number, action: string) {
     const post = await this.prisma.forumPost.findFirst({
       where: { id: postId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            account_type: true,
+            username: true,
+            full_name: true,
+            profile_image: true,
+          },
+        },
+      },
     });
     if (!post) throw new NotFoundException('Post not found');
 
@@ -63,9 +86,9 @@ export class PostsService {
     return this.prisma.forumPost.update({
       where: { id },
       data: {
-        content: dto.content,
-        image_urls: dto.image_urls,
-        category: dto.category,
+        content: dto.content || post.content,
+        image_urls: dto.image_urls || post.image_urls,
+        category: dto.category || post.category,
       },
     });
   }
@@ -109,7 +132,15 @@ export class PostsService {
         ],
       },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            full_name: true,
+            account_type: true,
+            profile_image: true,
+          },
+        },
         likes: true,
         comments: true,
         shares: true, // Include shares in the ranking
@@ -144,7 +175,14 @@ export class PostsService {
   ): Promise<PostComment> {
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            account_type: true,
+          },
+        },
+      },
     });
 
     if (!post) {
@@ -175,18 +213,16 @@ export class PostsService {
       throw new NotFoundException('Comment not found');
     }
 
-    // Check if the user is the one who created the comment
     if (comment.user_id !== userId) {
       throw new ForbiddenException(
         'You are not authorized to update this comment',
       );
     }
 
-    // Update and return the comment
     return this.prisma.postComment.update({
       where: { id: commentId },
       data: {
-        content: dto.content, // Assuming you want to only update content
+        content: dto.content,
       },
     });
   }
@@ -217,7 +253,14 @@ export class PostsService {
   async likePost(userId: number, postId: number) {
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            account_type: true,
+          },
+        },
+      },
     });
 
     if (!post) {
@@ -265,7 +308,14 @@ export class PostsService {
   async sharePost(userId: number, postId: number) {
     const post = await this.prisma.forumPost.findUnique({
       where: { id: postId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            account_type: true,
+          },
+        },
+      },
     });
 
     if (!post) {
@@ -312,6 +362,55 @@ export class PostsService {
     });
   }
 
+  async getUserPosts(userId: number) {
+    return this.prisma.forumPost.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            full_name: true,
+            account_type: true,
+            profile_image: true,
+          },
+        },
+        likes: true,
+        comments: true,
+        shares: true,
+      },
+    });
+  }
+
+  async getUserSharedPosts(userId: number): Promise<any[]> {
+    const sharedPosts = await this.prisma.sharedPost.findMany({
+      where: { user_id: userId },
+      include: {
+        post: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                profile_image: true,
+              },
+            },
+            likes: true,
+            comments: true,
+            shares: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Add original_user attribute to each shared post
+    return sharedPosts.map((shared) => ({
+      ...shared.post,
+    }));
+  }
+
   async getPostInteractions(
     userId: number,
     postId: number,
@@ -351,19 +450,16 @@ export class PostsService {
 
   private async checkPrivatePostAccess(
     userId: number,
-    post: any,
+    post: PostWithUser,
     action: string,
   ) {
     if (
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       post.user.account_type === AccountType.PRIVATE &&
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       post.user_id !== userId
     ) {
       const isFollowing = await this.prisma.follow.findFirst({
         where: {
           follower_id: userId,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           followed_id: post.user.id,
         },
       });

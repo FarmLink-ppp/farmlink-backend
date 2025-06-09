@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PostCategory } from '@prisma/client';
-import { IsOptional, IsString, IsArray, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({
@@ -18,9 +18,7 @@ export class CreatePostDto {
     required: false,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  image_urls?: string[];
+  image_urls: string[] = [];
 
   @ApiProperty({
     title: 'the category of a post',
